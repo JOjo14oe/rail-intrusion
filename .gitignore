@@ -13,3 +13,4 @@ data/
 refs/*.pdf
 *.pt
 *.zip
+refs/extracted-text/
