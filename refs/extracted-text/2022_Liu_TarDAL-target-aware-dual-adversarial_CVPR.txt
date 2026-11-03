@@ -1,0 +1,922 @@
+
+
+===== PAGE 1 =====
+Target-aware Dual Adversarial Learning and a Multi-scenario Multi-Modality
+Benchmark to Fuse Infrared and Visible for Object Detection
+Jinyuan Liu†, Xin Fan‡*, Zhanbo Huang‡, Guanyao Wu‡, Risheng Liu‡,§, Wei Zhong‡, Zhongxuan Luo†
+†School of Software Technology, Dalian University of Technology
+‡DUT-RU International School of Information Science & Engineering, Dalian University of Technology
+§Peng Cheng Laboratory
+{atlantis918}@hotmail.com, {zbhuang,rollingplain}@mail.dlut.edu.cn, {xin.fan,rsliu}@dlut.edu.cn
+InfraredVisible
+TarDAL Efficiency Comparison
+Detection Evaluation (mAP@.5)
+Average Runtime (s)
+0.05
+0.74
+0.76
+0.78
+0.80
+0.82
+0.84
+0.10 0.15 0.20 0.25
+0.86
+RFN
+Parameters: 10930K
+Information Fusion 2021
+DDcGAN
+Parameters: 1098K
+TIP 2020
+TarDAL
+Parameters: 296K
+FusionGAN
+Parameters: 925K
+Information Fusion 2019
+MFEIF
+Parameters: 158K
+TCSVT 2021
+U2Fusion
+Parameters: 659K
+TPAMI 2020
+GANMcC
+Parameters: 1864K
+TIM 2021
+DenseFuse
+Parameters: 74K
+TIP 2019
+Building
+Mountain
+Shrub
+Crossroads
+Tunnel
+O verhead Bridge
+Shops
+Alley
+G ateF orest
+N ature
+Campus
+Roadscene
+Roadscene
+Campus
+Campus
+Castle
+Seascape
+Disguise
+H a z e
+Severe  
+W eather
+Comple
+x  Roa
+d
+Condition
+Small Targe
+t
+Cro w d
+Residen
+t
+       Area
+Roadscene
+Daytime
+O vercast
+N ightChallenge
+G rasslandPar
+k ing LotS q uareAlleyFootbridge
+Resident Area
+Drive
+w ayAtriumPavilion
+Beach
+Crossroads
+H igh Street
+Dense F og
+H eavy Rain
+La k e
+Beach
+F orest 
+H a z e
+F ield
+G rove
+Cro
+w d
+Par
+k ing Lot Alley
+Basement
+Drive
+w ay
+Par
+k ing Lot
+Night 
+Fair
+Num: 1621
+Ran g e:
+Num: 1078
+Da y time Norma l 
+         Ran g e
+Num: 765
+Ov ercast Norma l  Ran g e
+De p en d in g  on t h e scene
+Num: 736
+M F D Image Distribution3 3M F D Pi x el Distribution
+Figure 1. From the left to right: Detection accuracy and computational comparisons with the state-of-the-art, the scenario and pixel
+distributions of our benchmark M 3FD. Ours outperforms all counterparts with higher detection rates, lower average runtime, and fewer
+training parameters. M3FD covers comprehensive scenarios with a wide range of pixel variations especially on both modalities.
+Abstract
+This study addresses the issue of fusing infrared and visi-
+ble images that appear differently for object detection. Aim-
+ing at generating an image of high visual quality, previous
+approaches discover commons underlying the two modal-
+ities and fuse upon the common space either by iterative
+optimization or deep networks. These approaches neglect
+that modality differences implying the complementary in-
+formation are extremely important for both fusion and sub-
+sequent detection task. This paper proposes a bilevel opti-
+mization formulation for the joint problem of fusion and de-
+tection, and then unrolls to a target-aware Dual Adversar-
+ial Learning (TarDAL) network for fusion and a commonly
+used detection network. The fusion network with one gen-
+erator and dual discriminators seeks commons while learn-
+ing from differences, which preserves structural informa-
+tion of targets from the infrared and textural details from
+the visible. Furthermore, we build a synchronized imag-
+ing system with calibrated infrared and optical sensors, and
+collect currently the most comprehensive benchmark cov-
+ering a wide range of scenarios. Extensive experiments
+on several public datasets and our benchmark demonstrate
+that our method outputs not only visually appealing fusion
+but also higher detection mAP than the state-of-the-art ap-
+proaches. The source code and benchmark are available at
+https://github.com/dlut-dimt/TarDAL.
+1. Introduction
+Multi-modality imaging has attracted signiﬁcant atten-
+tion in a wide range of applications, e.g., surveillance [28]
+and autonomous driving [5], with the rapid development of
+sensing hardware. Especially, the combination of infrared
+and visible sensors has remarkable advantages for subse-
+quent intelligent processing [11, 38, 39]. Visible imaging
+provides rich details with high spatial resolution under well-
+deﬁned lighting conditions while infrared sensors, captur-
+ing ambient temperature variations emitted from objects,
+highlight structures of thermal targets insensitive to light-
+ing changes. Unfortunately, infrared images are often ac-
+companied by blurred details with lower spatial resolution.
+Owing to their evident appearance discrepancy, it is chal-
+lenging to fuse visually appealing images and/or to support
+higher-level vision tasks such as segmentation [4,29], track-
+ing [2,7], and detection [32], by making full use of the com-
+plementary information from the infrared and visible.
+Numerous infrared and visible image fusion (IVIF) ap-
+proaches that aim at improving visual quality have been de-
+veloped in the past decades. Traditional multi-scale trans-
+form [10, 24], optimization model [16, 20, 41], spare rep-
+resentation [37, 43], and subspace methods attempt to dis-
+cover intrinsic common features of the two modalities and
+to design appropriate weighting rules for fusion. These
+arXiv:2203.16220v1  [cs.CV]  30 Mar 2022
+
+===== PAGE 2 =====
+approaches typically have to invoke a time consuming it-
+erative optimization process. Recently, researchers intro-
+duce deep networks into IVIF by learning powerful fea-
+ture representation and/or weighting strategies when re-
+dundant well-prepared image pairs are available for train-
+ing [8,12,21–23,35]. The fusion turns out to be an efﬁcient
+inference process yielding fruitful quality improvements.
+Nevertheless, either traditional or deep IVIF approaches
+strive for quality improving but leave alone the follow-up
+detection, which is the key to many practical computer vi-
+sion applications. The fusion emphasizes more on ‘seeking
+commons’ but neglects the differences of these two modal-
+ities on presenting structural information of targets and tex-
+tural details of ambient background. These differences play
+a critical role on differentiating distinct features of targets
+for object detection meanwhile generating clear appearance
+of high contrast favorable for human inspection.
+Moreover, learning from these differences (actually com-
+plementary information) demands a comprehensive collec-
+tions of imaging data from the two modalities. The images
+capturing in scenarios varying with lighting and weather ex-
+hibit signiﬁcantly different characteristics from both modal-
+ities. Unfortunately, existing data collections only cover
+limited conditions, placing an obstacle to learn the comple-
+mentary information and validate the effectiveness.
+This paper proposes a bilevel optimization formulation
+for the joint problem of fusion and detection. This for-
+mulation unrolls to a well-designed dual-adversarial fusion
+network, composed of one generator and two target-aware
+discriminators, and a commonly used detection network.
+One discriminator distinguishes foreground thermal targets
+from the image domain of infrared imaging while the other
+one differentiates the background textural details from gra-
+dient domain of the visible image. We also derive a co-
+operative training strategy to learn optimal parameters for
+the two networks. Figure 1 demonstrates that our method
+accurately detects objects from target-distinct and visual-
+appealing fusion with less time and fewer parameters than
+the state-of-the-art (SOTA). Our contributions are four-fold:
+• We embrace both image fusion and object detection
+with a bilevel optimization formulation, producing
+high detection accuracy as well as the fused image with
+better visual effects.
+• We devise a target-aware dual adversarial learn-
+ing network (TarDAL) with fewer parameters for
+detection-oriented fusion. This one-generator and
+dual-discriminator network ‘seeks commons while
+learning from differences’ that preserves information
+of targets from the infrared and textural details from
+the visible.
+• We derive a cooperative training scheme from the bi-
+level formulation yielding optimal network parameters
+for fast inference (fusion and detection).
+• We build a synchronized imaging system with well-
+calibrated infrared and optical sensors and collect a
+multi-scenario multi-modality dataset (M 3FD) with
+4, 177 aligned infrared and visible image pairs and
+23, 635 annotated objects. The dataset covers four ma-
+jor scenarios with various environments, illumination,
+season, and weather, having a wide range of pixel vari-
+ations, as shown in Figure 1.
+2. Related Works
+The fusion module is critical to detect objects from
+multi-modality sensors. This section brieﬂy reviews previ-
+ous learning-based IVIF approaches closely related to ours
+and available benchmarks that are necessary for learningand
+empirical evaluation.
+2.1. Learning-based approaches
+Deep learning has achieved promising progress in low-
+level vision tasks [12, 15, 17, 19, 23, 25, 35, 40] due to the
+powerful nonlinear ﬁtting ability of multi-layer neural net-
+works. Early works plugged deep networks into the IVIF
+process acting as a module of feature extraction or weights
+generation [8, 12, 13, 16]. Liu et al. [16] cascaded two pre-
+trained CNNs, one for feature and the other for weights
+learning. Researchers also resort to an end-to-end archi-
+tecture so that one-step network inference can generate a
+plausible fused image by one set of network parameters.
+Li et al. [9] introduced a residual fusion network to learn
+enhanced features in a common space, yielding structure
+consistent results favorable to human inspection.
+More recently, the IVIF approaches based on generative
+adversarial networks (GAN) [26, 36, 42] produce appealing
+results by transporting different distributions to the desired
+one [21–23]. For the ﬁrst time, Ma et al. introduced an
+adversarial game between the fused and visible in order to
+enhance texture details [22]. However, this signal adver-
+sarial mechanism may lose the vital information from the
+infrared. Ma et al. apply an identical adversarial strategy to
+both the visible and infrared, which partially compensates
+the infrared information [21]. Unfortunately, all these ap-
+proaches fail capturing the different characteristics of these
+two imaging types. It is worth investigating these differ-
+ences complementary to each other from which both fusion
+and detection can beneﬁt.
+2.2. Benchmarks
+In recent years, we have witnessed the rapid evolu-
+tion of IVIF benchmarks, including the TNO Image Fu-
+sion [33], INO Videos Analytics 1, OSU Color-Thermal 2,
+and RoadScene [35] and Multispectral datasets [32]. The
+1https://www.ino.ca/en/technologies/video-analytics-dataset/videos/
+2http://vcipl-okstate.org/ pbvs/bench/
+
+===== PAGE 3 =====
+(a) Problem Formulation
+Target-aware constrain Detection
+Generator
+Infrared Images
+Visible Images
+Fused Image
+Foreground Targets
+Background Details
+Detail
+Discriminator
+ćrealĈ 
+ćrealĈ 
+ćfakeĈ 
+ćfakeĈ 
+Fused Background Details
+Fused Foreground Targets
+Target
+Discriminator
+(b) Dual Adversarial Fusion Network
+Fusion
+FusionFusion
+澟
+:Optimal Fusion Solution
+:Optimal Detection Solution
+Fusion
+FusionFusion Detection
+(c) Cooperative Training
+FP BP 
+Figure 2. Methodology framework: (a) bilevel optimization formulation for fusion and detection, (b) target-aware adversarial dual learning
+network for fusion, and (c) cooperative training scheme.
+Scene : x: Road y: Campus z: Street {: Hash Weather |: Disguise }: Smoogy ~: Forest : Others
+Dataset Img pairs Resolution Color Camera angle Nighttime Objects Scene Annotation
+TNO 261 768 ×576  horizontal 65 few x|}~ 
+INO 2100 328 ×254  surveillance  few x{ 
+OUS 285 320 ×240  surveillance  few x 
+Roadscene 221 768 ×576  driving 122 medium xz 
+Multispectral 2999 768 ×576  driving 1139 14146 xz 
+M3FD 4200 1024 ×768  multiplication 1671 33603 x∼ 
+Table 1. Illustration of M3FD and existing aligned multi-modality datasets. Resolution refers to the average when it is different in a dataset.
+TNO dataset [33] is the most commonly used public avail-
+able dateset for IVIF, which contains 261 pairs of multi-
+spectral imagery at day and night time. The INO dataset
+is provided by the National Optics Institute of Canada and
+contains aligned infrared and visible pairs. It contributes to
+developing multiple sensor types for video analysis applica-
+tions in challenging environments.The OSU Color-Thermal
+Database is established for fusion-based object detection
+containing 285 pairs of registered infrared and color visi-
+ble images. The whole dataset is collected at a busy path-
+way on the Ohio State University Campus during the day-
+time. Xu et al. released Roadscene, having 221 aligned
+infrared and visible pairs taken in the road scene contain-
+ing rich objects, such as vehicles and pedestrians [35].
+Takumi et al. [32] proposed a novel Multispectral dataset
+for autonomous driving that consists of RGB, NIR, MIR,
+and FIR images and annotated object categories.
+Table 1 lists the proﬁles of these datasets such as scale,
+resolution, lighting, and scenario categories. The low image
+resolution, limited number of object and scenario types, and
+few labels stumble wide applications of existing datasets to
+the higher-level detection task on multiple modalities.
+3. The Proposed Method
+This section details our method, staring from the bilevel
+optimization formulation of fusion and detection. Then, we
+elaborate the target-aware dual adversarial learning network
+for fusion. Finally, we give a cooperative training scheme
+to learn optimal parameters for both fusion and detection.
+3.1. Problem formulation
+Unlike previous approaches catering for high visual
+quality, we state that IVIF has to generate an image that
+beneﬁts both visual inspection and computer perception ,
+namely detection-oriented fusion. Suppose that the in-
+frared, visible and fused are all gray-scale with the size
+of m× n, denoted as column vectors x, y, and u ∈
+Rmn×1, respectively. Following the truism Stackelberg’s
+theory [14, 18, 27], we formulate the detection-oriented fu-
+sion as a bilevel optimization model:
+min
+ωd
+Ld(Ψ(u∗; ωd)), (1)
+s.t. u∗∈ arg min
+u
+f(u; x, y) +gT(u; x) +gD(u; y), (2)
+where Ld is the detection-speciﬁc training loss and
+Ψ denotes a detection network with learnable parame-
+ters ωd. f(·) is an energy-based ﬁdelity term contain-
+ing the fused image u, and source images x and y
+whilegT (·) andgD (·) are two feasibility constraints deﬁned
+on the infrared and visible, respectively.
+Figure 2(a) illustrates that this bilevel formulation makes
+it possible to ﬁnd the solution mutually favoring fusion and
+
+===== PAGE 4 =====
+detection. Nevertheless, it is nontrivial to solve Eq. (2) by
+a traditional optimizing technique as the fusion task is not a
+simple equality/inequality constraint. Instead, we introduce
+a fusion network Φ with learned parameters ωf and convert
+the bilevel optimization to single-level:
+min
+ωd,ωf
+Ld(Ψ(u∗; ωd)),s.t. u∗ = Φ(x, y; ωf). (3)
+Hence, we unroll the optimization into two learning net-
+works Φ and Ψ. We adopt YOLOv5 3 as our backbone for
+the detection network Ψ, whereLd also follows its setting,
+and carefully design the fusion network Φ as below.
+3.2. Target-aware dual adversarial network
+Typical deep fusion methods strive for learning common
+features underlying the two modalities that appear differ-
+ently. Instead, our fusion network seeks commons while
+learning from differences that imply complementary char-
+acteristics of these two types of imaging. Typically, the
+infrared highlights distinct structures of targets while the
+visible provides textural details of background.
+We introduce an adversarial game that consists one gen-
+erator and two discriminators in order to combine common
+with distinct features from the two modalities, as shown in
+Figure 2(b). The generator G is encouraged to provide a
+realistic fused image to simultaneously fool both discrimi-
+nators. The target discriminator DT evaluates the intensity
+consistence between the targets from the infrared and those
+masked out from the fused given by G (the top row of Fig-
+ure 2(b)); the detail discriminatorDD discriminates the gra-
+dient distribution of the visible from that of the fused (the
+bottom row of Figure 2(b)). These two discriminators work
+in different domains as targets exhibit consistent intensity
+distribution while gradients characterize textures.
+Generator: The generator contributes to generate a
+fused image that preserves overall structures and maintains
+a similar intensity distribution as source images. The com-
+monly used structural similarity index (SSIM) [34] acts as
+the loss function:
+LSSIM = (1− SSIMu,x)/2 + (1− SSIMu,y)/2, (4)
+where LSSIM denotes structure similarity loss. To bal-
+ance the pixel intensity distribution of source images,
+we introduce a pixel loss based on the saliency degree
+weight (SDW). Supposing that the saliency value ofx at the
+kth pixel can be obtained by Sx(k) =
+255∑
+i=0
+Hx(i)|x(k)−i|,
+where x(k) is the value of the kth pixel and Hx is the his-
+togram of pixel valuei, we deﬁne the pixel lossLpixel as:
+Lpixel =‖u− ω1x‖1 +‖u− ω2y‖1, (5)
+where ω1 = Sx(k)/[Sx(k)− Sy(k)], ω2 = 1− ω1.
+3https://github.com/ultralytics/YOLOv5
+We employ a 5-layer dense block [6] asG to extract com-
+mon features, and then use a merge block with three convo-
+lutional layers for feature aggregation. Each convolutional
+layer consists of one convolutional operation, batch normal-
+ization and ReLU activation function. The generated fused
+images u has the same size with the sources.
+Target and detail discriminators : The target discrim-
+inator DT is used to distinguish the foreground thermal
+targets of fused result to the infrared while the detail dis-
+criminator DD contributes to distinguish the background
+details of fused result to the visible. We employ a pre-
+trained saliency detection network [3] to calculate the tar-
+get mask m from infrared images so that the two discrim-
+inators can perform on their respective regions (target and
+background). Thus, we deﬁne the adversarial lossLadvf as:
+LfDT = Ex∼ ˜p(R(x))[D(x)]− E˜x∼ ˜p(R(u))[D(˜x)], (6)
+LfDD = Ex∼ ˜p( ˆR(∇y))[D(x)]− E˜x∼ ˜p( ˆR(∇u))[D(˜x)], (7)
+Ladvf =LfDT +LfDD, (8)
+whereR = x⊙ m and ˆR = 1−R , differentiating targets
+from background, and⊙ denotes the point-wise multiplica-
+tion.∇(·) denotes a gradient operation, e.g., Sobel.
+The adversarial loss functions of these discriminators
+calculate the Wasserstein divergence to mutually identify
+whether the foreground thermal targets and background tex-
+ture details are realistic, deﬁned as:
+LDT =LfDT +kE˜x∼˜r(R(x))[(‖∇DT (˜x)‖)p], (9)
+LDD =LfDD +kE˜x∼˜r( ˆR(∇x))[(‖∇DD(˜x)‖)p], (10)
+where ˜r(x) denotes sample space that is similar to ˜p(x).
+Commonly,k andp sets to 2 and 6, respectively.
+The two discriminatorsDT andDD share the same net-
+work structure, having four convolutional layers and one
+fully connection layer. Figure 3 demonstrates the detailed
+architectures of the generator and dual discriminators.
+Totally,Lf is combination of the aforementioned three
+main parts: Lf =LSSIM +αLpixel +βLadvf , (11)
+whereα andβ are the trade-off parameters.
+Conv
+BN
+ReLU
+11Conv
+ReLU
+Conv
+Tanh
+Conv
+BN
+ReLU
+Conv
+BN
+ReLU
+Conv
+BN
+ReLU
+FC
+Generator Discriminator
+Figure 3. The architectures of our generator and discriminator.
+3.3. Cooperative training strategy
+The bilevel optimization naturally derive a cooperative
+training strategy to obtain optimal network parameters ω =
+(ωd, ωf). We introduce a a fusion regularizer Lf and con-
+vert Eq. (3) optimizing detection subject to the fusion con-
+straint to to a mutual optimization:
+
+===== PAGE 5 =====
+Daytime NightOvercast Challenge 
+Cross Road Promenade Disguise Smoggy Severe weatherSeascapeRoadsceneNature Campus Strong light
+Figure 4. Visualization of infrared-visible images in our M3FD dataset. The dataset covers extensive scenarios with various environments,
+illumination, season, and weather.
+min
+ωd,ωf
+Ld(Ψ(u∗; ωd)) +λLf(Φ(x, y; ωf)), (12)
+s.t. u∗ = Φ(x, y; ωf), (13)
+whereλ is the trade-off parameter. Rather than designing a
+weighting rule, this regularizer can well balance fusion and
+detection.
+Figure 2(c) illustrates the ﬂow of gradient propagation to
+cooperatively train the fusion and detection networks. The
+loss gradients with respect to ωd and ωf are calculated as:
+∂Ld
+∂ωd
+= ∂Ld
+∂Ψd
+∂Ψd
+∂ωd
+, ∂Ld
+∂ωf
+= ∂Ld
+∂Ψd
+∂Ψd
+∂Ψf
+∂Ψf
+∂ωf
++λ∂Lf
+∂Ψf
+∂Ψf
+∂ωf
+.
+(14)
+These equations reveal that the gradients of the detection
+loss w.r.t. the detection parameters along with those w.r.t.
+the fusion parameters are all back propagated and the latter
+also consists of the gradients of the fusion loss w.r.t. the
+fusion parameters.
+Finally, this strategy cannot only generate a visually ap-
+pealing image but also output accurate detection given the
+trained network parameters, enabling us to ﬁnd the optimal
+solution to detection-oriented fusion and to converge more
+efﬁcient than independent training schemes.
+4. Multi-scenario Multi-modality Benchmark
+Existing datasets with infrared and visible images can
+hardly be applied to learn and/or evaluate detection from
+multi-modality data. Our benchmark M 3FD contains in-
+frared and visible images of high resolution covering di-
+verse object types under various scenarios as given in the
+last row of Table 1.
+Figure 5. Illustration of our synchronize imaging system.
+We constructed a synchronized system containing one
+binocular optical camera and one binocular infrared sensor
+(shown in Figure 5) in order to capture corresponding two-
+modality images of natural scenes. The baselines (distance
+between the focal centers of binocular lens) of the visible
+and infrared binocular cameras are12cm and 20cm, respec-
+tively. The optical center distance between the visible and
+infrared senors is 4cm. Visible images have a high reso-
+lution of 1024×768 and a wide imaging range while in-
+frared images have a standard resolution of 640 ×512 and
+the wavelength range is 8− 14µm.
+We ﬁrst calibrated all cameras to estimate their internal
+and external parameters, and then calculated a homogra-
+phy matrix that projects coordinates of infrared images to
+those of the visible. Eventually, we obtained well-aligned
+infrared/visible image pairs with the size of 1024× 768 by
+warping all images to a common coordinate4.
+We categorized all 4, 200 aligned pairs in M 3FD into
+four typical types, i.e. Daytime, Overcast, Night, and Chal-
+lenge, with ten sub-scenarios shown in Figure 4. Mean-
+while, we annotated 33, 603 objects of six classes, i.e., Peo-
+ple, Car, Bus, Motorcycle, Truck and Lamp, which com-
+monly occur in surveillance and autonomous driving. The
+quantity and diversity of M3FD pave the possibility to learn
+and evaluate object detection by fusing images.
+5. Experiments
+We performed experimental evaluations on four
+datasets (three for IVIF, i.e., TNO, Roadscene, and
+M3FD, and two for object detection, i.e., MS and M 3FD).
+180/3,500 multi-modality images are selected and cropped
+to 24k/151k patches with 320×320 pixels by random crop-
+ping and augmented for training the fusion and detection
+task, respectively. The tuning parametersα andβ are set to
+20 and 0.1, respectively. The Adam optimizer updates the
+network parameters with the learning rate of 1.0× 10−3
+and exponential decay. The epoch is set to 300 with batch
+size of 64. Our approach is implemented on PyTorch with
+an NVIDIA Tesla V100 GPU.
+5.1. Results of infrared-visible image fusion
+We evaluate the fusion performance of TarDAL by mak-
+ing a comparison with 7 state-of-the-art methods, including
+DenseFuse [8], FusionGAN [22], RFN [9], GANMcC [23],
+DDcGAN [21], MFEIF [12], and U2Fusion [35].
+4This set includes pairs from one set of infrared and visible sensors, and
+the depth data from the binocular cameras will be published in the future.
+
+===== PAGE 6 =====
+Ir image Vis image DenseFuse FusionGAN RFN GANMcC DDcGAN MFEIF U2Fusion TarDAL
+Figure 6. Visual comparisons of our TarDAL with state-of-the-art methods on typical image pairs in TNO, RoadScene and M3FD datasets.
+DenseFuse
+FusionGAN
+RFN
+GANMcC
+DDcGAN
+MFEIF
+U2Fusion
+TarDAL
+Figure 7. Quantitative comparisons with seven IVIF methods on TNO, RoadScene and M3FD datasets, respectively. The x-axis represents
+metrics and the y-axis are the values. (∗). In the boxes, the orange lines and the green tangles denote medium and mean values.
+Qualitative Comparisons The intuitive qualitative results
+on three typical image pairs from three datasets are shown
+in Figure 6. Compared with other existing methods, our
+TarDAL has two signiﬁcant advantages. First, the discrimi-
+native target from infrared images can be well preserved. As
+shown in Figure 6 (the green tangles of the second group),
+the people in our method exhibits high contrast and distinc-
+tive prominent contour, so that it is beneﬁt to visual obser-
+vation . Second, our results can preserve abundant textural
+details from visible images (the green tangles of the ﬁrst and
+third group), which are more in line with human visual sys-
+tem. In contrast, visual inspection shows that DenseFuse,
+and FusionGAN cannot highlight the discriminative targets
+well, while GANMcC and DDcGAN fail to obtain rich tex-
+tural details. Note that our TarDAL is able to generate more
+visual-friendly fused results with clear targets, sharper edge
+contours, and preserve abundant textural details.
+Quantitative Comparisons Subsequently, we compare our
+TarDAL with the above-mentioned competitors quantita-
+tively on 400 image pairs ( 20 image pairs from TNO, 40
+image pairs from the RoadScene, and 340 image pairs from
+M3FD). Besides, three evaluation metrics, i.e., mutual in-
+formation (MI) [30], entropy (EN) [31] and standard de-
+viation (SD) [1] are introduced for evaluation. The quan-
+titative results are reported in Figure 7. As can be seen
+from the statistical results, our method continuously gen-
+erates the largest or the second-largest mean value on three
+datasets among all evaluation metrics. Meanwhile, achiev-
+ing a lower variance indicates that our method is more sta-
+ble in dealing with various visual scenes. In speciﬁc, the
+largest average value on MI proves that our method trans-
+fers more considerable information from both two source
+images. Values of EN and SD reveal that our results con-
+tain abundant information and the highest contrast between
+targets and the background. In conclusion, our method sta-
+bly reserves useful information to a certain degree, espe-
+cially the most discriminative target, the richest texture de-
+tails, and considerable structure similarity with the source
+images.
+5.2. Results of infrared-visible object detection
+To thoroughly discuss how does IVIF inﬂuences multi-
+modality object detection performance, two datasets, i.e.,
+Multispectral and M 3FD, are employed. In which, we uti-
+lized YOLOv5 as the baseline model for object detection.
+For fair comparison, we retain the detection model on the
+fused result of seven state-of-the-art methods, respectively.
+Qualitative Comparisons As shown in Figure 8, note that
+merely using an infrared or visible sensor cannot detect
+well, e.g., a stopped car for infrared image and person for
+the visible one. On the contrary, almost all the fusion meth-
+ods improve the detection performance by utilizing com-
+
+===== PAGE 7 =====
+Ir image Vis image DenseFuse FusionGAN RFN GANMcC DDcGAN MFEIF U2Fusion TarDAL
+Figure 8. Visual comparison of our TarDAL with state-of-the-art methods on the Multispectral and M3FD datasets.
+Method Multispectral dataset M3FD dataset Efﬁcient Analysis
+Person Car Bike Car Stop Cone All mAP@.5 Day Overcast Night Challenge All mAP@.5 SIZE(M) FLOPS(G) TIME(s)
+Infrared 0.753 0.753 0.733 0.739 0.492 0.709 0.589 0.803 0.795 0.709 0.734 0.748 0.781 - - -
+Visible 0.717 0.822 0.740 0.691 0.531 0.739 0.591 0.824 0.787 0.759 0.756 0.779 0.756 - - -
+DenseFuse 0.754 0.833 0.829 0.749 0.607 0.755 0.608 0.759 0.806 0.837 0.776 0.791 0.783 0.074 48.92 0.251
+FusionGAN 0.763 0.846 0.828 0.751 0.575 0.756 0.601 0.816 0.798 0.667 0.773 0.765 0.788 0.925 497.76 0.124
+RFN 0.505 0.619 0.520 0.512 0.427 0.605 0.592 0.796 0.803 0.827 0.793 0.794 0.796 10.93 - 0.238
+GANMcC 0.472 0.811 0.765 0.680 0.620 0.724 0.603 0.796 0.811 0.827 0.790 0.805 0.797 1.864 1002.56 0.246
+DDcGAN 0.735 0.841 0.810 0.761 0.645 0.766 0.594 0.780 0.771 0.689 0.776 0.748 0.744 1.097 896.84 0.211
+MFEIF 0.760 0.837 0.790 0.741 0.640 0.755 0.607 0.770 0.812 0.683 0.778 0.744 0.718 0.158 25.32 0.045
+U2Fusion 0.574 0.599 0.579 0.530 0.432 0.562 0.604 0.793 0.783 0.836 0.773 0.801 0.782 0.659 366.34 0.123
+TarDAL 0.762 0.868 0.833 0.757 0.678 0.780 0.613 0.823 0.816 0.846 0.869 0.846 0.807 0.296 14.88 0.041
+Table 2. Quantitative results of object detection on the Multispectral and M 3FD datasets among all the image fusion method + detector
+(YOLOv5). The best result is in red whereas the second best one is in blue.
+plementary information from both sides. With designing
+target-aware bilevel adversarial learning and a cooperative
+training scheme integration in our method, we can continu-
+ously generate a detection-friendly fused result, which has
+advantage in detecting person and vehicle, e.g., the shel-
+tered car and pedestrians on distant rocks.
+Quantitative Comparisons Table 2 reported the quantita-
+tive results on two datasets. Almost all the fusion methods
+achieve promising detection results, in which the detection
+AP greatly exceed the case of using only the visible or in-
+frared images. Note that our TarDAL is superior to other
+methods in terms of detection mAP on two datasets, which
+obtain 1.4% and 1.1% improvement compared to the sec-
+ond one, i.e., DenseFuse and GANMcC. It is worth pointing
+out that our TarDAL has advantage in dealing with the chal-
+lenge scenes because TarDAL fully discovers the unique in-
+formation from different modalities.
+Computational Complexity Analysis To comprehensively
+analyze the computational complexity of our method, we
+provide the time consumption and the computational efﬁ-
+ciency of all the methods. As shown in the last column
+of Table 2, the strong computing ability of CNNs allows
+these learning-based methods to achieve high speed. Note
+that our method simultaneously achieves the highest run-
+ning speed and lower computing complexity in terms of
+FLOPs and training parameters, ensembling the follow-up
+high-level vision application with high efﬁciency.
+5.3. Ablation studies
+Study on model architectures We investigate the model
+architecture of our method and further validate the effec-
+tiveness of different individual components. First, we re-
+move the target discriminatorDT from our whole network.
+In Figure 9, due to the lack of distinguishing signiﬁcant in-
+frared targets in this variant, the fused results tend to blur
+the target to a certain degree. Besides, in Table 3, note that
+DT also plays a vital role in boosting the detection perfor-
+mance after fusion. Second, the detail discriminatorDD has
+a contribution in preserving textural details from the visible
+images. In the absence of DD, the background details of
+the fused image cannot be fully recovered, and the intuitive
+visual results can be found in Figure 9. However, DD has
+a tiny negative impact on object detection due to redundant
+background details. Furthermore, Without DT andDD in-
+tegrating into our whole network, EN and SD can achieve
+the highest value on the TNO dataset. This is because that
+the heavy noise on the fusion results may cause a signiﬁ-
+cant rise in terms of EN and SD. In summary, our method
+depends on the intermediate results of each step, and each
+step plays a positive effect on the ﬁnal fused result.
+
+===== PAGE 8 =====
+Model Discriminator TNO Dateset Roadscene Dataset M3FD Dataset
+DT DD MI EN SD MI EN SD MI EN SD mAP@.5
+M1   2.506 7.223 53.107 3.307 7.295 48.561 2.942 7.282 44.857 0.722
+M2   2.591 7.045 50.245 3.274 7.128 46.751 2.842 6.981 39.364 0.719
+M3   2.596 7.024 46.727 3.127 7.037 42.656 2.814 7.086 41.255 0.781
+M4   2.766 7.177 51.352 3.378 7.355 49.637 3.211 7.313 45.827 0.807
+Table 3. Quantitative comparisons of different model architectures. The best result is in red whereas the second best one is in blue.
+Training Strategy Multispectral dataset M3FD dataset
+Person Car Bike Car Stop Cone All mAP@.5 Day Overcast Night Challenge All mAP@.5
+TarDALDT 0.762 0.868 0.833 0.757 0.678 0.780 0.613 0.823 0.816 0.846 0.869 0.846 0.807
+TarDALT T 0.827 0.862 0.881 0.667 0.539 0.755 0.615 0.827 0.828 0.862 0.881 0.850 0.809
+TarDALCT 0.843 0.863 0.892 0.762 0.679 0.807 0.624 0.816 0.844 0.904 0.935 0.875 0.811
+Table 4. Quantitative comparisons of different training strategies. The best result is in red whereas the second best one is in blue.
+Figure 9. Progressive fusion results. From left to right: source
+images, base network, w/o-DT , w/o-DD and the full model.
+Analyzing the training loss functions We discuss the im-
+pact of different loss functions on our method. In Fig-
+ure 10, it is easy to notice that our method can maintain
+much salient pixel distribution with high contrast than the
+method without SDW, which can illustrate the effective-
+ness of the newly designed SDW function. Meanwhile,
+the method without m may lose some vital details, e.g.,
+leaves and chimney silhouette. This is because that m al-
+lows two discriminators to perform adversarial learning un-
+der their respective region, hence paying more attention to
+their unique features.
+Evaluating different versions of training strategyWe fur-
+ther verify the advantages of our cooperative training (CT )
+in comparing with direct training ( DT ) and task-oriented
+training (TT ). As shown in Figure 11, TT only uses de-
+tection loss to train the network, resulting in a worse visual
+effect for observation. In contrast, CT has a signiﬁcant ad-
+vantage in boosting the detection performance and better
+visual effects. The same trend can be found in Table 4,CT
+reaches the largest or the second-largest scores among the
+two different datasets.
+Ir image Vis image w/o SDW w/o m Ours
+Figure 10. Qualitative results on discussing loss functions.
+Ir image Vis image TarDAL DT TarDALT T TarDALCT
+Figure 11. Visual comparisons of different training strategies.
+6. Conclusion
+Within this paper, a bilevel optimization formulation for
+jointly realizing fusion and detection is proposed. By un-
+rolling the model to a well-designed fusion network and
+a commonly used detection network, we can generate a
+visual-friendly result for fusion and object detection. To
+promote future researches in this ﬁeld, we raise a synchro-
+nized imaging system with visible-infrared sensors and col-
+lect a multi-scenario multi-modality benchmark.
+
+===== PAGE 9 =====
+References
+[1] V Aslantas and E Bendes. A new image quality metric for
+image fusion: the sum of the correlations of differences.Aeu-
+international Journal of electronics and communications ,
+69(12):1890–1896, 2015.
+[2] Guillem Bras ´o and Laura Leal-Taix ´e. Learning a neural
+solver for multiple object tracking. In IEEE/CVF CVPR ,
+pages 6247–6257, 2020.
+[3] Zijun Deng, Xiaowei Hu, Lei Zhu, Xuemiao Xu, Jing Qin,
+Guoqiang Han, and Pheng-Ann Heng. R3net: Recurrent
+residual reﬁnement network for saliency detection. InIJCAI,
+pages 684–690, 2018.
+[4] Jun Fu, Jing Liu, Haijie Tian, Yong Li, Yongjun Bao, Zhiwei
+Fang, and Hanqing Lu. Dual attention network for scene
+segmentation. In IEEE/CVF CVPR, pages 3146–3154, 2019.
+[5] Hongbo Gao, Bo Cheng, Jianqiang Wang, Keqiang Li, Jian-
+hui Zhao, and Deyi Li. Object classiﬁcation using cnn-based
+fusion of vision and lidar in autonomous vehicle environ-
+ment. IEEE TII, 14(9):4224–4231, 2018.
+[6] Gao Huang, Zhuang Liu, Geoff Pleiss, Laurens Van
+Der Maaten, and Kilian Weinberger. Convolutional networks
+with dense connectivity. IEEE TPAMI, 2019.
+[7] Bo Li, Wei Wu, Qiang Wang, Fangyi Zhang, Junliang Xing,
+and Junjie Yan. Siamrpn++: Evolution of siamese visual
+tracking with very deep networks. In IEEE/CVF CVPR ,
+pages 4282–4291, 2019.
+[8] Hui Li and Xiao-Jun Wu. Densefuse: A fusion approach to
+infrared and visible images. IEEE TIP , 28(5):2614–2623,
+2018.
+[9] Hui Li, Xiao-Jun Wu, and Josef Kittler. Rfn-nest: An end-to-
+end residual fusion network for infrared and visible images.
+Information Fusion, 73:72–86, 2021.
+[10] Shutao Li, Xudong Kang, and Jianwen Hu. Image fusion
+with guided ﬁltering. IEEE TIP, 22(7):2864–2875, 2013.
+[11] Zhuoxiao Li, Jinyuan Liu, Risheng Liu, Xin Fan, Zhongx-
+uan Luo, and Wen Gao. Multiple task-oriented encoders for
+uniﬁed image fusion. In IEEEICME, pages 1–6. IEEE, 2021.
+[12] Jinyuan Liu, Xin Fan, Ji Jiang, Risheng Liu, and Zhongx-
+uan Luo. Learning a deep multi-scale feature ensemble and
+an edge-attention guidance for image fusion. IEEE TCSVT,
+2021.
+[13] Jinyuan Liu, Yuhui Wu, Zhanbo Huang, Risheng Liu, and
+Xin Fan. Smoa: Searching a modality-oriented architecture
+for infrared and visible image fusion. IEEE SPL, 28:1818–
+1822, 2021.
+[14] Risheng Liu, Jiaxin Gao, Jin Zhang, Deyu Meng, and
+Zhouchen Lin. Investigating bi-level optimization for learn-
+ing and vision from a uniﬁed perspective: A survey and be-
+yond. IEEE TPAMI, 2021.
+[15] Risheng Liu, Zhiying Jiang, Xin Fan, and Zhongxuan Luo.
+Knowledge-driven deep unrolling for robust image layer sep-
+aration. IEEE TNNLS, 2019.
+[16] Risheng Liu, Jinyuan Liu, Zhiying Jiang, Xin Fan, and
+Zhongxuan Luo. A bilevel integrated model with data-driven
+layer ensemble for multi-modality image fusion. IEEE TIP,
+30:1261–1274, 2020.
+[17] Risheng Liu, Zhu Liu, Jinyuan Liu, and Xin Fan. Search-
+ing a hierarchically aggregated fusion architecture for fast
+multi-modality image fusion. In ACM MM , pages 1600–
+1608, 2021.
+[18] Risheng Liu, Long Ma, Xiaoming Yuan, Shangzhi Zeng, and
+Jin Zhang. Task-oriented convex bilevel optimization with
+latent feasibility. IEEE TIP, 2022.
+[19] Risheng Liu, Long Ma, Jiaao Zhang, Xin Fan, and Zhongx-
+uan Luo. Retinex-inspired unrolling with cooperative prior
+architecture search for low-light image enhancement. In
+IEEE/CVF CVPR, pages 10561–10570, 2021.
+[20] Jiayi Ma, Chen Chen, Chang Li, and Jun Huang. Infrared and
+visible image fusion via gradient transfer and total variation
+minimization. Information Fusion, 31:100–109, 2016.
+[21] Jiayi Ma, Han Xu, Junjun Jiang, Xiaoguang Mei, and Xiao-
+Ping Zhang. Ddcgan: A dual-discriminator conditional gen-
+erative adversarial network for multi-resolution image fu-
+sion. IEEE TIP, 29:4980–4995, 2020.
+[22] Jiayi Ma, Wei Yu, Pengwei Liang, Chang Li, and Junjun
+Jiang. Fusiongan: A generative adversarial network for in-
+frared and visible image fusion. Information Fusion, 48:11–
+26, 2019.
+[23] Jiayi Ma, Hao Zhang, Zhenfeng Shao, Pengwei Liang, and
+Han Xu. Ganmcc: A generative adversarial network with
+multiclassiﬁcation constraints for infrared and visible image
+fusion. IEEE TIM, 70:1–14, 2020.
+[24] Jinlei Ma, Zhiqiang Zhou, Bo Wang, and Hua Zong. In-
+frared and visible image fusion based on visual saliency map
+and weighted least square optimization. Infrared Physics &
+Technology, 82:8–17, 2017.
+[25] Long Ma, Risheng Liu, Jiaao Zhang, Xin Fan, and Zhongx-
+uan Luo. Learning deep context-sensitive decomposition for
+low-light image enhancement. IEEE TNNLS, 2021.
+[26] Tu Nguyen, Trung Le, Hung Vu, and Dinh Phung. Dual
+discriminator generative adversarial nets.Advances in neural
+information processing systems, 30, 2017.
+[27] Peter Ochs, Ren ´e Ranftl, Thomas Brox, and Thomas Pock.
+Bilevel optimization with nonsmooth lower level problems.
+Lecture Notes in Computer Science , 9087:654–665, 2015.
+[28] Nirmala Paramanandham and Kishore Rajendiran. Infrared
+and visible image fusion using discrete cosine transform and
+swarm intelligence for surveillance applications. Infrared
+Physics & Technology, 88:13–22, 2018.
+[29] Mengyang Pu, Yaping Huang, Qingji Guan, and Qi Zou.
+Graphnet: learning image pseudo annotations for weakly-
+supervised semantic segmentation. In ACM MM, pages 483–
+491. ACM, 2018.
+[30] Guihong Qu, Dali Zhang, and Pingfan Yan. Information
+measure for performance of image fusion. Electronics Let-
+ters, 38(7):313–315, 2002.
+[31] Wesley J. Roberts, Jan A. Aardt Van, and Fethi Ahmed. As-
+sessment of image fusion procedures using entropy, image
+quality, and multispectral classiﬁcation. Journal of Applied
+Remote Sensing, 2(1):1–28, 2008.
+[32] Karasawa Takumi, Kohei Watanabe, Qishen Ha, Antonio
+Tejero-De-Pablos, Yoshitaka Ushiku, and Tatsuya Harada.
+Multispectral object detection for autonomous vehicles. In
+ACM MM, pages 35–43, 2017.
+
+===== PAGE 10 =====
+[33] Alexander Toet. The tno multiband image data collection.
+Data in brief, 15:249, 2017.
+[34] Zhou Wang, Alan C Bovik, Hamid R Sheikh, Eero P Simon-
+celli, et al. Image quality assessment: from error visibility to
+structural similarity. IEEE TIP, 13(4):600–612, 2004.
+[35] Han Xu, Jiayi Ma, Junjun Jiang, Xiaojie Guo, and Haibin
+Ling. U2fusion: A uniﬁed unsupervised image fusion net-
+work. IEEE TPAMI, 2020.
+[36] Fangneng Zhan, Hongyuan Zhu, and Shijian Lu. Spatial fu-
+sion gan for image synthesis. In IEEE/CVF CVPR , pages
+3653–3662, 2019.
+[37] Qiang Zhang, Yi Liu, Rick S Blum, Jungong Han, and
+Dacheng Tao. Sparse representation based multi-sensor im-
+age fusion for multi-focus and multi-modality images: A re-
+view. Information Fusion, 40:57–75, 2018.
+[38] Xingchen Zhang, Ping Ye, and Gang Xiao. Vifb: a vis-
+ible and infrared image fusion benchmark. In IEEE/CVF
+CVPRW, pages 104–105, 2020.
+[39] Wenda Zhao, Dong Wang, and Huchuan Lu. Multi-focus
+image fusion with a natural enhancement via a joint multi-
+level deeply supervised convolutional neural network. IEEE
+TCSVT, 29(4):1102–1115, 2018.
+[40] Zixiang Zhao, Shuang Xu, Chunxia Zhang, Junmin Liu,
+Pengfei Li, and Jiangshe Zhang. Didfuse: Deep image de-
+composition for infrared and visible image fusion. arXiv
+preprint arXiv:2003.09210, 2020.
+[41] Zixiang Zhao, Shuang Xu, Chunxia Zhang, Junmin Liu, and
+Jiangshe Zhang. Bayesian fusion for infrared and visible im-
+ages. Signal Processing, 177:107734, 2020.
+[42] Bin Zhu, Chong-Wah Ngo, Jingjing Chen, and Yanbin Hao.
+R2gan: Cross-modal recipe retrieval with generative adver-
+sarial network. In IEEE/CVF CVPR , pages 11477–11486,
+2019.
+[43] Zhiqin Zhu, Hongpeng Yin, Yi Chai, Yanxia Li, and Guanqiu
+Qi. A novel multi-modality image fusion method based on
+image decomposition and sparse representation. Information
+Sciences, 432:516–529, 2018.

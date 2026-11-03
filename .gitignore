@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.pytest_deps/
+models/
+models_tmp/
+weights_ext/
+out/
+materials/
+runs/
+data/
+# third-party paper PDFs are not redistributed (use the DOIs in refs/README.md)
+refs/*.pdf
+*.pt
+*.zip

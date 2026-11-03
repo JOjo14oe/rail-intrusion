@@ -1,0 +1,738 @@
+
+
+===== PAGE 1 =====
+Unsupervised Misaligned Infrared and Visible Image Fusion via Cross-Modality
+Image Generation and Registration
+Di Wang1 , Jinyuan Liu1 , Xin Fan2 and Risheng Liu2∗
+1School of Software Technology, Dalian University of Technology, China
+2International School of Information Science Engineering, Dalian University of Technology, China
+diwang1211@mail.dlut.edu.cn, atlantis918@hotmail.com, {xin.fan, rsliu}@dlut.edu.cn
+Abstract
+Recent learning-based image fusion methods have
+marked numerous progress in pre-registered multi-
+modality data, but suffered serious ghosts deal-
+ing with misaligned multi-modality data, due to
+the spatial deformation and the difficulty narrow-
+ing cross-modality discrepancy. To overcome the
+obstacles, in this paper, we present a robust cross-
+modality generation-registration paradigm for un-
+supervised misaligned infrared and visible image
+fusion (IVIF). Specifically, we propose a Cross-
+modality Perceptual Style Transfer Network (CP-
+STN) to generate a pseudo infrared image taking
+a visible image as input. Benefiting from the fa-
+vorable geometry preservation ability of the CP-
+STN, the generated pseudo infrared image em-
+braces a sharp structure, which is more conducive
+to transforming cross-modality image alignment
+into mono-modality registration coupled with the
+structure-sensitive of the infrared image. In this
+case, we introduce a Multi-level Refinement Reg-
+istration Network (MRRN) to predict the displace-
+ment vector field between distorted and pseudo in-
+frared images and reconstruct registered infrared
+image under the mono-modality setting. Moreover,
+to better fuse the registered infrared images and vis-
+ible images, we present a feature Interaction Fu-
+sion Module (IFM) to adaptively select more mean-
+ingful features for fusion in the Dual-path Inter-
+action Fusion Network (DIFN). Extensive exper-
+imental results suggest that the proposed method
+performs superior capability on misaligned cross-
+modality image fusion.
+1 Introduction
+Image fusion is to extract the complementary information
+from different modality images and aggregate them to gener-
+ate richer and more meaningful feature representations. Typ-
+ically, Infrared and Visible Image Fusion (IVIF) enjoys the
+∗Corresponding author
+merit and presents conduciveness to practical applications
+such as autonomous driving and video surveillance.
+Most existing IVIF methods [Liu et al., 2020b; 2021e;
+2022b] are designed for the hand-crafted pre-registered im-
+ages, which are very labor-intensive and time-sensitive, de-
+spite numerous progress. And, they are sensitive to the dis-
+crepancy of intensity of the misaligned infrared and visible
+images, resulting in serious ghosting artifacts on fused im-
+ages, once slight offset and deformation exist. The intrinsic
+reason is that the large cross-modality variation between in-
+frared and visible images makes it impractical to straightly
+bridge the domain gap between them in a shared feature
+space. Coupled with the absence of cross-modality similar-
+ity constraints, few attempts have ever been made to fuse the
+misaligned infrared and visible images. The primary obstacle
+is cross-modality image alignment.
+More often than not, existing widely-used image align-
+ment methods [Ilg et al., 2017; Balakrishnan et al., 2018 ]
+perform pixel-wise and feature-level alignment by explic-
+itly estimating the deformation field between the distorted
+image and its reference. However, they are worked under
+only a single modality setting [Tang et al., 2020] due to their
+high dependence on the similarity of distribution and appear-
+ance on either synthetic or real data with neighborhood refer-
+ence. Moreover, the designs of the similarity measures [Tang
+et al., 2022 ] to optimize the cross-modality alignment pro-
+cess have been proven to be quite challenging. These ob-
+stacles gave rise to the development of cross-modality med-
+ical image translation [Y anget al., 2020; Liu et al., 2020a;
+2021d] and cross-modality Re-ID tasks [Wang et al., 2019a;
+2019b]. The former leverages the cGAN [Isola et al., 2017 ]
+to perform NeuroImage-to-NeuroImage translation, while the
+latter learns the cross-modality match in pedestrian images
+of a person across disjoint camera views by an RGB-to-IR
+(infrared) translation. A recent study [Arar et al., 2020 ]
+presents a multi-modality image registration method by train-
+ing an image-to-image translation network on the two in-
+put modalities. The basic idea of the above-mentioned ap-
+proaches is using the image-to-image translation to imple-
+ment cross-modality transformation to narrow the large vari-
+ation between different modalities.
+Motivated by this idea, we propose a specialized cross-
+Proceedings of the Thirty-First International Joint Conference on Artiﬁcial Intelligence (IJCAI-22)
+3508
+
+===== PAGE 2 =====
+modality generation-registration paradigm (CGRP) for unsu-
+pervised misaligned infrared and visible image fusion. An
+inherent characteristic of infrared images is the emphasis on
+sharp geometry structures over texture details. Generating a
+pseudo infrared image preserving sharp structure information
+is more conducive to implementing mono-modality registra-
+tion between it with the corresponding distorted infrared im-
+age. To better preserve geometry structure during generating
+pseudo infrared images from visible images, we proposed a
+Cross-modality Perceptual Style Transfer Network (CPSTN),
+which inherits the basic cycle consistent learning manner of
+the CycleGAN [Zhu et al., 2017], while developing a percep-
+tual style transfer constraint and cross regularizations across
+two-cycle learning path to further guide the CPSTN to gener-
+ate sharper structures. Without them, the generation capabil-
+ity of our CPSTN will degrade to that in [Arar et al., 2020 ].
+Doing this lays the foundation for the mono-modality regis-
+tration of infrared images. We utilize a Multi-level Refine-
+ment Registration Network (MRRN) to predict the deforma-
+tion field from coarse to fine between distorted and pseudo
+infrared images and reconstruct the registered infrared image.
+In this case, we further perform the fusion of the registered in-
+frared image and visible image. To enable the fusion network
+to focus more on faithful texture details, while avoiding fea-
+ture smoothing caused by some unsophisticated fusion rules
+(e.g., concatenation, weighted average), we develop an Inter-
+action Fusion Module (IFM) to adaptively select meaningful
+features from infrared and visible images to achieve fused re-
+sults with sharp textures. We evaluate the proposed method
+on manually processed unaligned datasets and demonstrate
+its strengths through comprehensive analysis. The main con-
+tributions are summarized as follows:
+• We propose a highly-robust unsupervised infrared and
+visible image fusion framework, which is more focused
+on mitigating ghosting artifacts caused by the fusion of
+misaligned image pairs compared with learning-based
+fusion methods specialized for pre-registered images.
+• Considering the difficulty of the cross-modality im-
+age alignment, we exploit a specialized cross-modality
+generation-registration paradigm to bridge the large dis-
+crepancy between modalities, thus achieving effective
+infrared and visible image alignment.
+• An interaction fusion module is developed to adap-
+tively fuse multi-modality features, which avoids feature
+smoothing caused by unsophisticated fusion rules and
+emphasizes faithful texture details.
+The extensive experimental results demonstrate that the pro-
+posed method performs superior capability on misaligned
+cross-modality image fusion. The code will be available
+at https://github.com/wdhudiekou/UMF-CMGR.
+2 Method
+2.1 Motivation
+Different imaging pipelines and heat dissipation within the
+sensor result in misalignment between observed infrared and
+visible images, presenting as shift and deformation. By
+observing, it is found that straightly fusing misaligned in-
+frared and visible images often suffer serious ghosts. Inspired
+by [Wang et al., 2019a; 2019b ] that reduce cross-modality
+variation via image-to-image translation, and catering to the
+inherent characteristic that infrared image ”emphasizes struc-
+ture over texture”, we propose a specialized cross-modality
+generation-registration paradigm to reduce spatial offsets and
+alleviate the ghost during misaligned infrared and visible im-
+age fusion.
+2.2 Cross-modality Perceptual Style Transfer
+The first part of the proposed cross-modality generation-
+registration paradigm (CGRP) is image translation. Consid-
+ering that infrared images are prone to distortion due to ther-
+mal radiation, we proposed a Cross-modality Perceptual Style
+Transfer Network (CPSTN) to translate the visible imageIvis
+to its infrared counterpartI ˜ir. Together, a pseudo infrared im-
+age pair (Iir, I˜ir) is formed to provide a unified representa-
+tion. As shown in Figure 1, CPSTN is a UNet-like generator,
+and its bottom obtains 9 resnet blocks. Different from Cycle-
+GAN [Zhu et al., 2017], we tend to design a specific learning
+strategy controlled by a perceptual style transfer constraint
+and establish the inter-path correlation between the two-
+cycle generative routes to further optimize [Liu et al., 2022c;
+2021c] the generation of sharp structure of the pseudo in-
+frared image. The pseudo infrared image is generated by
+I ˜ir = Tθ(Iir), where Tθ denotes the CSPTN with network
+parameter θ. This optimization process is illustrated in the
+left dotted box in Figure 1. Note that theG(A) corresponds to
+our CPSTN, and the perceptual style transfer constraint and
+the regularization of inter-path correlation are explained in
+Section 2.5.
+2.3 Multi-level Refinement Registration
+Thanks to the reduction of cross-modality discrepancy by
+CPSTN, the registration of infrared images under the mono-
+modality settings becomes the other core part of the CGRP .
+As shown in Figure 1, we exploit a Multi-level Refinement
+Registration Network (MMRN) to predict deformation field
+between distorted and pseudo infrared images and recon-
+struct the registered infrared image. The MRRN consists of a
+shared multi-level feature extractor (SM-FE), two Coarse-to-
+Fine deformation field estimation (C2F-DFE) modules, and
+a resampler layer. In each C2F-DFE, a coarse DFE module
+MC and a refined DFE module MR are included. Then, the
+coarse deformation field is first predicted as
+φkc = MC
+
+F k(I ˜ir, Iir) , (1)
+the refined deformation field is estimated by
+φkr = MR
+
+φkc
+
+⊕ φkc , (2)
+where F k denotes the k-th level of the SM-FM. Suppose the
+SM-FE contains K levels, when k = K, the final deforma-
+tion field −ϕ = φKr is estimated. Finally, we use the re-
+sampler layer similar to the STN [Jaderberg et al., 2015 ] to
+reconstruct the registered infrared image by
+I regir = Iir ◦ (−ϕ), (3)
+the operator ◦ denotes the spatial transform for registration.
+2.4 Dual-path Interation Fusion
+To fuse registered infrared imageI regir and visible image Ivis,we present a dual-path interaction fusion network (DIFN). It
+Proceedings of the Thirty-First International Joint Conference on Artiﬁcial Intelligence (IJCAI-22)
+3509
+
+===== PAGE 3 =====
+…
+Data
+Shared Feature Extraction
+C2F-DFE C2F-DFE
+Re-Sampler
+Cross-modality Perceptual Style 
+Transfer Network
+Multi-level Refinement Registration Network
+Dual-path Interaction Fusion Network
+Interaction 
+Fusion Module 
+Resnet Blocks
+…
+C S
+{         , }
+Conv kernel size 3×3
+Conv stride = 2
+Transposed Conv stride = 2
+Element-wise multiplication
+ConcatenationElement-wise summation
+Multi-scale feature extractor
+Sigmoid
+Coarse DVF estimation
+DVF refinement module
+Training Strategy of the CPSTN
+{        , }
+Figure 1: The workflow of the proposed unsupervised cross-modality fusion network for misaligned infrared and visible images. The network
+mainly consists of three subnetworks, which are Cross-modality Perceptual Style Transfer Network, Multi-level Refinement Registration
+Network, and Dual-path Interaction Fusion Network. Taking misaligned infrared and visible images as inputs, our method performs the
+above three subnetworks in sequence to obtain the final fused image.
+is composed of a dual-path feature extraction module and a
+feature interaction fusion module (IFM). Here, the structure
+of the dual-path feature extraction module inherits the resid-
+ual dense network [Zhang et al., 2021b ], and the extracted
+features are presented by
+f regir , fvis = MθE (I regir , Ivis) , (4)
+where MθE is the feature extraction module, and θE is its
+parameter.
+Interaction Fusion Module. We utilize the IFM to adap-
+tively select features from infrared and visible images to fuse,
+shown in small dashed box of Figure 1. To focus on more sig-
+nificant information, the feature responses are recalibrated by
+Att = S (Conv 1×1 (f regir ) ⊗ Conv 1×1 (fvis)) , (5)
+and the infrared and visible features are activated as
+f Attir = f regir ⊗ (1 +Att) ,
+f Attvis = fvis ⊗ (1 +Att) , (6)
+then we obtain the final fused image by
+If us= Conv 3×3
+
+Concat
+
+f Attir , fAttvi
+
+, (7)
+where S is the Sigmoid function, and ⊗ denotes the element-
+wise multiplication operation.
+2.5 Loss Functions
+Perceptual style transfer loss. To generate more realistic
+pseudo infrared images, we introduce a perceptual style trans-
+fer (PST) loss to control the cycle consistency of CPSTN. The
+PST loss consists of two terms known as perceptual lossLpcp
+and style loss Lsty. First, the Lpcp is defined as
+L
+ψj
+pcp = ∥ψj(Ivis) − ψj (GB (GA(Ivis))) ∥2
++∥ψj(Iir) − ψj (GA (GB(Iir))) ∥2, (8)
+where ψj is the j-th layer of the VGG-19 [Simonyan and Zis-
+serman, 2015 ] model and j ∈ [2, 7, 12, 21, 30] along with
+weight ω ∈ [ 132 , 116 , 18 , 1, 1]. These features are also used tocompute the Lsty, which is defined as
+L
+ψj
+sty = ωj∥Gψj (Ivis) − Gψj (GB (GA(Ivis))) ∥2
++ωj∥Gψj (Iir) − Gψj (GA (GB(Iir))) ∥2, (9)
+where G is Gram matrix [Sajjadi et al., 2017], used to combat
+“checkerboard” artifacts. The overall PST loss is
+Lpst = λpLpcp + λsLsty, (10)
+where λp is set to 1.0, λs is set to 100.
+Cross regularization loss. Inventively, we present a cross
+regularization between two-cycle paths during training CP-
+STN to establish the inter-path correlation. It contains both
+content term Lcon and edge term Ledge, which are defined as
+Lcon = ∥I ˜ir − I ˆir∥1 + ∥Iv˜is − Ivˆis∥1,
+Ledge = ∥∇I ˜ir − ∇I ˆir∥char + ∥∇Iv˜is − ∇Ivˆis∥char, (11)
+where ∇ denotes laplacian gradient operator. We compute
+Ledge using the Charbonnier Loss [Lai et al., 2019 ]. The
+overall cross regularization is computed by
+Lcross = λcLcon + λeLedge, (12)
+where, λc = λe = 8.0.
+Registration loss. We adopt a bidirectional similarity loss
+to constrain the registration between distorted and pseudo in-
+frared images in feature space, which is defined as
+Lbisim = ∥ψj(I regir ) − ψj(I ˜ir)∥ + λrev ∥ψj(ϕ ◦ I ˜ir) − ψj(Iir)∥1,
+(13)
+the first term is forward, while the second term is backward
+with weight λrev = 0.2, in which the reverse deformation
+Proceedings of the Thirty-First International Joint Conference on Artiﬁcial Intelligence (IJCAI-22)
+3510
+
+===== PAGE 4 =====
+field ϕ is used to distort the pseudo infrared image I ˜ir andmake it approach to the distorted input Iir. To ensure a
+smooth deformation field, we define a smooth loss as
+Lsmooth = ∥∇ϕ∥1. (14)
+And then, the overall registration loss is computed by
+Lreg = Lsim + λsmLsmooth, (15)
+where λsm is set to 10 in our work.
+Fusion loss. In the fuison phase, we utilize MS-SSIM loss
+function Lmsssim to maintain sharper intensity distribution ofthe fused image, which is defined as
+Lmsssim = (1− SSIM (If us, Iregir )) + (1− SSIM (If us, Ivis)) .
+(16)
+To encourage the restoration of texture details, we model the
+gradient distribution and develop a joint gradient loss as
+LJGrad = ∥max (∇I regir , ∇Ivis) , ∇If us∥1. (17)
+For clearer textures, the gradient of the fused image is forced
+to approach the maximum value between the infrared and vis-
+ible image gradients. In addition, to retain the saliency tar-
+gets from the two images, we leverage self-visual saliency
+maps inspried by [Ghosh et al., 2019; Liu et al., 2021b;
+2022a] to build a new loss as
+ωir = Sfir / (Sfir − Sfvis ) , ωvis = 1− ωir,
+Lsvs = ∥ (ωir ⊗ I regir + ωvis ⊗ Ivis) , If us∥1, (18)
+where S denotes saliency matrix, ωvis and ωir denote the
+weight maps for infrared and visible images, respectively.
+The overall fusion loss is computed by
+Lf us= λssimLmsssim + λJG LJGrad + λsvsLsvs, (19)
+where λssim, λJG , and λsvs are set to 1.0, 20.0, and 5.0.
+Overall loss. We train our network by minimizing the fol-
+lowing overall loss function
+Ltotal = Lpst + Lcross + LGAN + Lreg + Lf us. (20)
+Note that the LGAN inherits that of CycleGAN to discrimi-
+nate whether pseudo infrared image is real or fake.
+3 Experiments
+3.1 Dataset and Implement Details
+Datasets. Our misalignment cross-modality image fusion are
+conducted on two widely-used datasets: TNO 1, and Road-
+Scene2, which are pre-registered. To meet the requirement
+of misaligned image pairs, we first generate several deforma-
+tion fields by performing different degrees of affine and elas-
+tic transformations and then apply them to infrared images to
+obtain distorted images. We use all 221 images from Road-
+Scene dataset as training samples. Due to the limited amount
+of the TNO dataset, we only use it as a testing set. In addition,
+we randomly select 55% images from RoadScene dataset for
+testing since our method is full-unsupervised.
+Implement Details. The code of our method is implemented
+using the PyTorch framework with an NVIDIA 2080Ti GPU.
+We randomly select8 image patches of size256×256 to form
+a batch. The Adam optimizer (β 1 = 0.9, and β2 = 0.999) is
+used to optimize our model. The initial learning rate is set to
+0.001 and remains unchanged throughout the training phase
+that goes through 300 epochs.
+1http://figshare.com/articles/TNO Image Fusion Dataset/1008029.
+2https://github.com/hanna-xu/RoadScene.
+3.2 Evaluation in IR-VIS Image Registration
+We evaluate the middle registered results using three common
+metrics including MSE, Mutual Information (MI)[Mahapatra
+et al., 2018], and Normalized Cross Correlation (NCC) [Cao
+et al., 2018 ]. Considering that multi-modality image align-
+ment methods are extremely rare, for a fair comparison with
+ours, we choose two typical image alignment algorithms
+based on deformation field, which are FlowNet [Ilg et al.,
+2017] and V oxelMorph[Balakrishnan et al., 2018]. Note that,
+FlowNet only predicts the deformation field for input image
+pairs, so the spatial transform layer (STN) [Jaderberg et al.,
+2015] is employed to generate registered images. As reported
+by Table 1, using directly these two algorithms to perform
+cross-modality alignment of the IR-VIS images yields neg-
+ligible improvement, even worse than the misaligned inputs.
+In contrast, the proposed CGRP gains about 0.10 and 0.23
+improvments in MI on TNO and RoadScene datasets, respec-
+tively. It is demonstrated that the proposed CGRP is more
+effective than existing popular image alignment methods.
+Methods TNO RoadSceneMSE↓ NCC↑ MI↑ MSE↓ NCC↑ MI↑
+Misaligned Input 0.007 0 .876 1 .558 0 .01 0 .894 1 .602
+FlowNet + STN 0.029 0 .636 1 .095 0 .009 0 .910 1 .549
+FlowNet + STN + CPST 0.007 0 .893 1 .465 0 .005 0 .949 1 .744
+V oxelMorph 0.007 0 .880 1 .545 0 .008 0 .914 1 .589
+V oxelMorph + CPST 0.005 0 .919 1 .573 0 .006 0 .941 1 .689
+Ours CGRP 0.004 0.926 1.648 0.004 0.963 1.833
+Table 1: Quantitative comparisons of cross-modality image regis-
+tration on the TNO and Roadscene datasets. The best results are
+presented with red bold font.
+3.3 Comparing with SOTA in IVIF
+We perform quantitative and qualitative evaluations for the
+proposed method against several state-of-the-art IVIF meth-
+ods, including DENSE [Li and Wu, 2019 ], DIDFuse [Zhao
+et al., 2020 ], FGAN [Ma et al., 2019 ], GAN-FM [Zhang et
+al., 2021a], MFEIF [Liu et al., 2021a], RFN [Li et al., 2021],
+and U2F [Xu et al., 2022], equipped with FlowNet+STN and
+V oxelMorph, two typical image alignment algorithms used to
+cross-modality image registration in our work. For fair com-
+parisons, we use the same testing samples (121and 24 images
+from RoadScene and TNO datasets) to evaluate them.
+Quantitative evaluation. We report the quantitative fusion
+results on TNO and RoadScene datasets in Table 2. It can
+be seen that our methods numerically outperforms existing
+IVIF methods by large margins and ranks first across all three
+metrics, including Cross Correlation (CC), Visual Informa-
+tion Fidelity (VIF) [Han et al., 2013], and Structural Similar-
+ity Index (SSIM) [Wang et al., 2004 ]. Especially, compared
+with GAN-FM, a recent research, our method gains 0.33 and
+0.46 improvements in VIF on TNO and RoadScene datasets,
+which demonstrate the superiority of the proposed method.
+Qualitative evaluation. Due to space limitation, Figure 2
+only presents qualitative comparisons using FlowNet+STN
+as the basic registration model. By observing the local en-
+larged areas, we can find that prior works fail to achieve de-
+sirable alignment and ghost elimination. In contrast, the pro-
+Proceedings of the Thirty-First International Joint Conference on Artiﬁcial Intelligence (IJCAI-22)
+3511
+
+===== PAGE 5 =====
+DENSE DIDFuse FGAN GAN-FM MFEIF PMGI RFN U2F Ours
+①: Aligned Method: (FlowNet+STN) / V oxelMorph ②: Dataset: RoadScene
+CC↑ 0.589/0.597 0.573/0.582 0 .502/0.582 0 .565/0.575 0 .588/0.596 0 .530/0.538 0 .587/0.593 0 .558/0.569 0.621
+VIF↑ 0.488/0.521 0 .445/0.469 0 .493/0.513 0 .564/0.597 0 .619/0.659 0.408/0.447 0 .563/0.590 0 .430/0.464 0.895
+SSIM↑ 0.311/0.355 0 .301/0.335 0 .255/0.281 0 .334/0.368 0 .342/0.380 0.266/0.314 0 .319/0.347 0 .297/0.343 0.507
+①: Aligned Method: (FlowNet+STN) / V oxelMorph ②: Dataset: TNO
+CC↑ 0.390/0.463 0 .380/0.452 0 .315/0.400 0 .350/0.419 0 .381/0.451 0 .363/0.447 0 .392/0.465 0.378/0.456 0.481
+VIF↑ 0.675/0.742 0 .545/0.597 0 .588/0.654 0 .556/0.627 0 .701/0.780 0.518/0.606 0 .671/0.728 0 .535/0.601 1.016
+SSIM 0.318/0.382 0.266/0.328 0 .236/0.294 0 .295/0.372 0 .297/0.379 0 .277/0.363 0 .300/0.349 0 .299/0.372 0.473
+Table 2: The quantitative comparisons of the IVIF results with eight state-of-the-art fusion methods on two common datasets when using
+FlowNet+STN and V oxelMorph algorithms as the basic registration models.
+DENSE FGAN DIDFuse U2F PMGI RFN MFEIF GAN-FM Ours
+Param. 0.925 0.074 0.261 0 .659 0.042 10.94 0.158 10 .21 0 .80
+Time 0.124 0 .251 0 .055 0 .123 0.182 0.239 0.045 0.334 0.024
+Table 3: Efficiency analysis of our joint registration-fusion model
+against state-of-the-art fusion methods.
+posed method shows favorable alignment and fusion capabil-
+ity while preserving sharp structures.
+Model efficiency. To examine model efficiency, we report
+the statistics of Params(M) and RunTime(s) in Table 3. We
+conduct the measures for a paired images with size of64 × 64
+on a single 2080Ti GPU. Noted that, our results are obtained
+by jointly measuring registration and fusion networks, while
+other methods only have a single fusion network. The results
+show that our method is competitive at least in running time.
+3.4 Ablation Studies
+CPSTN. We plug the CPSTN into FlowNet and V oxelMorph
+as their improved versions, then adopt them to conduct cross-
+modality IR-VIS image registration. As shown in Table 1,
+their quantitative results improve a large margin in collabora-
+tion with CPSTN than the original versions. Accordingly, the
+visual comparisons provided in Figure 3 suggest the effec-
+tiveness of the CPSTN. We observe that the registered results
+generated by the FlowNet model equipped with the CPSTN
+eliminate evident distortion. Besides, we verify the effec-
+tiveness of the CPSTN from the perspective of image fusion.
+As quantified in Table 4, improvements of 0.14 and 0.22 in
+VIF are obtained using the CPSTN on TNO and RoadScene
+datasets, respectively. The corresponding qualitative com-
+parisons in Figure 4(b) and (c) show that the CPSTN con-
+tributes to favorable fusion results with negligible ghosts for
+misaligned infrared and visible images. The above results
+comprehensively reveal the effectiveness of CPSTN from reg-
+istration and fusion perspectives.
+MRRN. Suppose that in the absence of CPSTN, we inves-
+tigate the effect of MRRN on misaligned IVIF tasks. Note
+that MRRN performs cross-modality image registration tak-
+ing the paired infrared and visible images as inputs under the
+same settings. As reported in Table 4, we compare the re-
+sults of the first two experiments on the TNO and RoadScene
+datasets, which show that using MRRN to implement cross-
+modality registration also improves the performance of IVIF
+to a certain extent, compared with straightly fusing the mis-
+aligned infrared and visible images.
+Datasets CPSTN MRRN DIFN MetricsCC↑ SSIM↑ VIF↑
+✗ ✗ ✓ 0.438 0 .369 0 .732
+TNO ✗ ✓ ✓ 0.476↑0.038 0.418↑0.049 0.876↑0.144
+✓ ✓ ✓ 0.481↑0.044 0.473↑0.103 1.016↑0.374
+✗ ✗ ✓ 0.563 0 .367 0 .543
+Road ✗ ✓ ✓ 0.601↑0.038 0.422↑0.055 0.673↑0.130
+✓ ✓ ✓ 0.621↑0.085 0.507↑0.140 0.895↑0.352
+Table 4: Ablation studies of the CPSTN and MRRN on TNO and
+RoadScene datasets.
+Loss Functions in CPSTN. We analyze the effect of Lpst
+and Lcross used in the CPSTN. As shown in Figure 5, with-
+out using the constraints from Lpst and Lcross, the gener-
+ated pseudo infrared image suffers serious structural degra-
+dation (Figure 5(c)) compared with the reference image (Fig-
+ure 5(a)). Using Lcross, the model preserves general struc-
+tural information, while subtle structures are not maintained
+well enough and ”checkerboard artifacts” are introduced ob-
+viously (Figure 5(d)). In contrast, the pseudo infrared image
+generated by our model (Figure 5(e)) has a sharper geome-
+try structure, which caters to the common sense that infrared
+image ”emphasizes structure over texture”.
+Interaction Fusion Module. We replace the IFM in the
+DIFN by concatenation operation to examine its effectiveness
+for the IVIF. As observed in Figure 6, the model without us-
+ing the IFM tends to generate smooth textures with low con-
+trast, while the result using the IFM has richer and sharper
+textures with positively high contrast. It is indicated that
+adaptively selecting features to be fused is more effective for
+improving fused image quality.
+3.5 Additional Analysis
+To verify the generalization of the proposed CPSTN, we
+plug it into two typical image alignment algorithms (i.e.,
+FlowNet+STN and V oxelMorph) implement mono-modality
+image registration between distorted and pseudo infrared im-
+ages, and further to implement fusion of the registered in-
+frared image and visible image on eight existing IVIF meth-
+ods. As shown in Figure 7, the first box of each method is the
+result of the model without using the CPSTN, and the second
+box is that of the model using the CPSTN. It can be observed
+that: i) These alignment models equipped with the CPSTN
+can promote effectively the fusion performance of existing
+Proceedings of the Thirty-First International Joint Conference on Artiﬁcial Intelligence (IJCAI-22)
+3512
+
+===== PAGE 6 =====
+VIS/IR DENSE DIDFuse FGAN GAN-FM MFEIF PMGI RFN U2F Ours
+Figure 2: Visualization of the IVIF results from different methods on the TNO and RoadScene datasets when using the FlowNet+STN
+algorithm as the basic registration model.
+(a) FlowNet (b) FlowNet+CPSTN (c) Ours
+Figure 3: Ablation analysis of the CPSTN from the registration per-
+spective on RoadScene dataset.
+(a) w/o T ,R (b) w/o T (c) Ours
+Figure 4: Ablation analysis of the CPSTN (T ) and MRRN (R ) on
+RoadScene dataset.
+IVIF methods for misaligned images, which reveals the favor-
+able generalization ability of the CPSTN for misaligned IVIF
+tasks. ii) Although conditioned by i), the proposed method
+still outperforms these improved IVIF methods on misaligned
+cross-modality images, which explains that the superiority of
+our overall framework relies on the close cooperation of each
+component.
+4 Conclusion
+In this work, we proposed a highly-robust unsupervised mis-
+aligned infrared and visible image fusion framework for miti-
+gating ghosts of the fused images. We exploited a generation-
+registration paradigm to simplify the cross-modality im-
+age alignment into a mono-modality registration. A fea-
+ture interaction fusion module was developed to adaptively
+select meaningful features from infrared and visible im-
+ages to fuse, avoiding feature smoothing and emphasizing
+faithful textures. Extensive experimental results demon-
+strated the superior capability of our method on misaligned
+cross-modality image fusion. Significantly, our generation-
+(b) VIS (c) w/o Lcross ,Lpst
+(a) Reference (d) w/o Lpst (e) Ours
+Figure 5: Ablation analysis of loss functions in CPSTN on Road-
+Scene dataset.
+(b) IR (c) VIS
+(a) VIS/IR (d) w/o IFM (e) w/ IFM
+Figure 6: Ablation analysis of the IFM on RoadScene dataset.
+VIF 1.2 
+0.2 
+DENSE DIDFuse FGAN GAN-FM MFEIF PMGI RFN U2F Ours 
+SSIM 
+DENSE DIDFuse FGAN GAN-FM MFEIF PMGI RFN U2F Ours 
+Figure 7: Generalization analysis of the proposed CPSTN.
+registration paradigm can be well extended to existing IVIF
+methods to improve their fusion performance on misaligned
+cross-modality images.
+Proceedings of the Thirty-First International Joint Conference on Artiﬁcial Intelligence (IJCAI-22)
+3513
+
+===== PAGE 7 =====
+Acknowledgments
+This work is partially supported by the National Natural Sci-
+ence Foundation of China (Nos. 61922019, 61733002 and
+62027826), and the Fundamental Research Funds for the
+Central Universities.
+References
+[Arar et al., 2020] Moab Arar, Yiftach Ginger, Dov Danon,
+Amit H. Bermano, and Daniel Cohen-Or. Unsupervised
+multi-modal image registration via geometry preserving
+image-to-image translation. In CVPR, pages 13407–
+13416, 2020.
+[Balakrishnan et al., 2018] Guha Balakrishnan, Amy Zhao,
+Mert R. Sabuncu, John V . Guttag, and Adrian V . Dalca.
+An unsupervised learning model for deformable medical
+image registration. In CVPR, pages 9252–9260, 2018.
+[Cao et al., 2018] Xiaohuan Cao, Jianhuan Y ang, Li Wang,
+Zhong Xue, Qian Wang, and Dinggang Shen. Deep learn-
+ing based inter-modality image registration supervised by
+intra-modality similarity. In MLMI, pages 55–63, 2018.
+[Ghosh et al., 2019] Sanjay Ghosh, Ruturaj G. Gavaskar,
+and Kunal N. Chaudhury. Saliency guided image detail
+enhancement. In NCC, pages 1–6, 2019.
+[Han et al., 2013] Y u Han, Y unze Cai, Yin Cao, and Xi-
+aoming Xu. A new image fusion performance metric
+based on visual information fidelity. Information Fusion,
+14(2):127–135, 2013.
+[Ilg et al., 2017] Eddy Ilg, Nikolaus Mayer, Tonmoy Saikia,
+Margret Keuper, Alexey Dosovitskiy, and Thomas Brox.
+Flownet 2.0: Evolution of optical flow estimation with
+deep networks. In CVPR, pages 1647–1655, 2017.
+[Isola et al., 2017] Phillip Isola, Jun-Y an Zhu, Tinghui Zhou,
+and Alexei A. Efros. Image-to-image translation with con-
+ditional adversarial networks. InCVPR, pages 5967–5976,
+2017.
+[Jaderberg et al., 2015] Max Jaderberg, Karen Simonyan,
+Andrew Zisserman, and Koray Kavukcuoglu. Spatial
+transformer networks. In NeurIPS, pages 2017–2025,
+2015.
+[Lai et al., 2019] Weisheng Lai, Jiabin Huang, Narendra
+Ahuja, and Ming-Hsuan Y ang. Fast and accurate image
+super-resolution with deep laplacian pyramid networks.
+IEEE Transactions on Pattern Analysis and Machine In-
+telligence, 41(11):2599–2613, 2019.
+[Li and Wu, 2019] Hui Li and Xiao-Jun Wu. Densefuse: A
+fusion approach to infrared and visible images. IEEE
+Transactions on Image Processing, 28(5):2614–2623,
+2019.
+[Li et al., 2021] Hui Li, Xiao-Jun Wu, and Josef Kittler. Rfn-
+nest: An end-to-end residual fusion network for infrared
+and visible images. Information Fusion, 73:72–86, 2021.
+[Liu et al., 2020a] Risheng Liu, Zi Li, Y uxi Zhang, Xin Fan,
+and Zhongxuan Luo. Bi-level probabilistic feature learn-
+ing for deformable image registration. In IJCAI, pages
+723–730, 2020.
+[Liu et al., 2020b] Risheng Liu, Jinyuan Liu, Zhiying Jiang,
+Xin Fan, and Zhongxuan Luo. A bilevel integrated model
+with data-driven layer ensemble for multi-modality image
+fusion. IEEE Transactions on Image Processing, 30:1261–
+1274, 2020.
+[Liu et al., 2021a] Jinyuan Liu, Xin Fan, Ji Jiang, Risheng
+Liu, and Zhongxuan Luo. Learning a deep multi-scale
+feature ensemble and an edge-attention guidance for im-
+age fusion. IEEE Transactions on Circuits and Systems
+for Video Technology, 2021.
+[Liu et al., 2021b] Jinyuan Liu, Y uhui Wu, Zhanbo Huang,
+Risheng Liu, and Xin Fan. Smoa: Searching a modality-
+oriented architecture for infrared and visible image fusion.
+IEEE Signal Processing Letters, 28:1818–1822, 2021.
+[Liu et al., 2021c] Risheng Liu, Jiaxin Gao, Jin Zhang, Deyu
+Meng, and Zhouchen Lin. Investigating bi-level optimiza-
+tion for learning and vision from a unified perspective: A
+survey and beyond. IEEE Transactions on Pattern Analy-
+sis and Machine Intelligence, 2021.
+[Liu et al., 2021d] Risheng Liu, Zi Li, Xin Fan, Chenying
+Zhao, Hao Huang, and Zhongxuan Luo. Learning de-
+formable image registration from optimization: Perspec-
+tive, modules, bilevel training and beyond. IEEE Transac-
+tions on Pattern Analysis and Machine Intelligence, 2021.
+[Liu et al., 2021e] Risheng Liu, Zhu Liu, Jinyuan Liu, and
+Xin Fan. Searching a hierarchically aggregated fusion ar-
+chitecture for fast multi-modality image fusion. In ACM
+MM, pages 1600–1608, 2021.
+[Liu et al., 2022a] Jinyuan Liu, Xin Fan, Zhangbo Huang,
+Guanyao Wu, Risheng Liu, Wei Zhong, and Zhongxuan
+Luo. Target-aware dual adversarial learning and a multi-
+scenario multi-modality benchmark to fuse infrared and
+visible for object detection. In CVPR, 2022.
+[Liu et al., 2022b] Jinyuan Liu, Jingjie Shang, Risheng Liu,
+and Xin Fan. Attention-guided global-local adversarial
+learning for detail-preserving multi-exposure image fu-
+sion. IEEE Transactions on Circuits and Systems for Video
+Technology, 2022.
+[Liu et al., 2022c] Risheng Liu, Pan Mu, Xiaoming Y uan,
+Shangzhi Zeng, and Jin Zhang. A general descent aggre-
+gation framework for gradient-based bi-level optimization.
+IEEE Transactions on Pattern Analysis and Machine Intel-
+ligence, 2022.
+[Ma et al., 2019] Jiayi Ma, Wei Y u, Pengwei Liang, Chang
+Li, and Junjun Jiang. Fusiongan: A generative adversarial
+network for infrared and visible image fusion.Information
+Fusion, 48:11–26, 2019.
+[Mahapatra et al., 2018] Dwarikanath Mahapatra, Zongyuan
+Ge, Suman Sedai, and Rajib Chakravorty. Joint registra-
+tion and segmentation of xray images using generative ad-
+versarial networks. In MICCAI, pages 73–80, 2018.
+[Sajjadi et al., 2017] Mehdi S. M. Sajjadi, Bernhard
+Sch¨olkopf, and Michael Hirsch. Enhancenet: Single im-
+age super-resolution through automated texture synthesis.
+In ICCV, pages 4501–4510, 2017.
+Proceedings of the Thirty-First International Joint Conference on Artiﬁcial Intelligence (IJCAI-22)
+3514
+
+===== PAGE 8 =====
+[Simonyan and Zisserman, 2015] Karen Simonyan and An-
+drew Zisserman. V ery deep convolutional networks for
+large-scale image recognition. In ICLR, 2015.
+[Tang et al., 2020] Hao Tang, Zechao Li, Zhimao Peng, and
+Jinhui Tang. Blockmix: Meta regularization and self-
+calibrated inference for metric-based meta-learning. In
+ACM MM, pages 610–618, 2020.
+[Tang et al., 2022] Hao Tang, Chengcheng Y uan, Zechao Li,
+and Jinhui Tang. Learning attention-guided pyramidal fea-
+tures for few-shot fine-grained recognition.Pattern Recog-
+nition, 2022.
+[Wang et al., 2004] Zhou Wang, Alan C. Bovik, Hamid R.
+Sheikh, and Eero P . Simoncelli. Image quality assessment:
+from error visibility to structural similarity. IEEE Trans-
+actions on Image Processing, 13(4):600–612, 2004.
+[Wang et al., 2019a] Guan’an Wang, Tianzhu Zhang, Jian
+Cheng, Si Liu, Y ang Y ang, and Zengguang Hou. Rgb-
+infrared cross-modality person re-identification via joint
+pixel and feature alignment. In ICCV, pages 3622–3631,
+2019.
+[Wang et al., 2019b] Zhixiang Wang, Zheng Wang, Yin-
+qiang Zheng, Y ung-Y u Chuang, and Shin’ichi Satoh.
+Learning to reduce dual-level discrepancy for infrared-
+visible person re-identification. In CVPR, pages 618–626,
+2019.
+[Xu et al., 2022] Han Xu, Jiayi Ma, Junjun Jiang, Xiaojie
+Guo, and Haibin Ling. U2fusion: A unified unsupervised
+image fusion network. IEEE Transactions of Pattern Anal-
+ysis and Machine Intelligence, 44(1):502–518, 2022.
+[Y anget al., 2020] Qianye Y ang, Nannan Li, Zixu Zhao,
+Xingyu Fan, Eric I-Chao Chang, and Y an Xu. Mri cross-
+modality image-to-image translation. Scientific reports,
+10(1):1–18, 2020.
+[Zhang et al., 2021a] Hao Zhang, Jiteng Y uan, Xin Tian, and
+Jiayi Ma. GAN-FM: infrared and visible image fusion us-
+ing GAN with full-scale skip connection and dual marko-
+vian discriminators. IEEE Transactions on Computational
+Imaging, 7:1134–1147, 2021.
+[Zhang et al., 2021b] Y ulun Zhang, Y apeng Tian, Y u Kong,
+Bineng Zhong, and Y un Fu. Residual dense network for
+image restoration. IEEE Transactions on Pattern Analysis
+and Machine Intelligence, 43(7):2480–2495, 2021.
+[Zhao et al., 2020] Zixiang Zhao, Shuang Xu, Chunxia
+Zhang, Junmin Liu, Jiangshe Zhang, and Pengfei Li. Did-
+fuse: Deep image decomposition for infrared and visible
+image fusion. In IJCAI, pages 970–976, 2020.
+[Zhu et al., 2017] Jun-Y an Zhu, Taesung Park, Phillip Isola,
+and Alexei A. Efros. Unpaired image-to-image transla-
+tion using cycle-consistent adversarial networks. In ICCV,
+pages 2242–2251, 2017.
+Proceedings of the Thirty-First International Joint Conference on Artiﬁcial Intelligence (IJCAI-22)
+3515

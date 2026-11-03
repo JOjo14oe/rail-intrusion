@@ -1,0 +1,2190 @@
+
+
+===== PAGE 1 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 1
+Infrared and Visible Image Fusion: From Data
+Compatibility to Task Adaption
+Jinyuan Liu, Member, IEEE, Guanyao Wu, Zhu Liu, Di Wang, Zhiying Jiang, Long Ma, Member, IEEE, Wei
+Zhong, Xin Fan, Senior Member, IEEE, Risheng Liu, Member, IEEE,
+Abstract—Infrared-visible image fusion (IVIF) is a fundamen-
+tal and critical task in the field of computer vision. Its aim
+is to integrate the unique characteristics of both infrared and
+visible spectra into a holistic representation. Since 2018, growing
+amount and diversity IVIF approaches step into a deep-learning
+era, encompassing introduced a broad spectrum of networks or
+loss functions for improving visual enhancement. As research
+deepens and practical demands grow, several intricate issues like
+data compatibility, perception accuracy, and efficiency cannot
+be ignored. Regrettably, there is a lack of recent surveys that
+comprehensively introduce and organize this expanding domain
+of knowledge. Given the current rapid development, this paper
+aims to fill the existing gap by providing a comprehensive survey
+that covers a wide array of aspects. Initially, we introduce a
+multi-dimensional framework to elucidate the prevalent learning-
+based IVIF methodologies, spanning topics from basic visual
+enhancement strategies to data compatibility, task adaptability,
+and further extensions. Subsequently, we delve into a profound
+analysis of these new approaches, offering a detailed lookup
+table to clarify their core ideas. Last but not the least, We
+also summarize performance comparisons quantitatively and
+qualitatively, covering registration, fusion and follow-up high-
+level tasks. Beyond delving into the technical nuances of these
+learning-based fusion approaches, we also explore potential
+future directions and open issues that warrant further explo-
+ration by the community. For additional information and a
+detailed data compilation, please refer to our GitHub repository:
+https://github.com/RollingPlain/IVIF ZOO.
+Index Terms —Image Fusion, Infrared and Visible, Image
+Registration, Object Detection.
+I. I NTRODUCTION
+I
+N spectral terms, a spectrum can be succinctly defined as
+the representation of light across varying frequencies or
+wavelengths. Broadly speaking, the spectrum encompasses the
+entire electromagnetic range, spanning from radio waves to
+gamma rays. However, in our daily lives, we are most familiar
+with the visible spectrum, which includes colors perceptible
+to the human eye, such as red, orange, yellow, green, blue,
+indigo, and violet. Yet, the visible spectrum represents only a
+minuscule portion of the entire spectrum. Beyond the realm of
+visible light, there exist numerous other spectral types, includ-
+ing ultraviolet, infrared, microwaves, and X-rays, each with its
+This work is supported in part by the National Natural Science Foundation
+of China (Nos. U22B2052, 62450072, 12326605, 62027826, 62302078,
+62372080); in part by National Key Research and Development Program
+of China (No. 2022YFA1004101); in part by China Postdoctoral Science
+Foundation (No. 2023M730741); and in part by the Fundamental Research
+Funds for the Central Universities (Nos. DUT24BS013, DUT24LAB125).
+Jinyuan Liu, Guanyao Wu, Zhu Liu, Di Wang, Zhijing Jiang, Long Ma, Wei
+Zhong, Xin Fan and Risheng Liu are with the School of Software Technology,
+Dalian University of Technology, Dalian, 116024, China. ( Corresponding
+author: Risheng Liu, e-mail: rsliu@dlut.edu.cn ).
+distinct characteristics and applications [1], [2]. Figure. 1 dis-
+plays images corresponding to different wavelengths, ranging
+from 10−12 meter (gamma ray) to 103 meter (broadcast band).
+With rapid advancement of artificial intelligence, there is
+a growing perceptual demand for intelligent systems to op-
+erate effectively in real-world, complex, and even extreme
+scenarios. However, the inherent limitations of singe spectral
+type often prevent a holistic, trustworthy, and precise depiction
+of these scenarios. Consequently, multi-spectral image fusion
+technologies have emerged, aiming to synthesize and refine
+the diverse image data from different sensors capturing the
+same environment [3], [4]. Among these, infrared and visible
+images act as the primary data sources for next-generation
+intelligent systems, playing an irreplaceable role in achieving
+high-reliability perception tasks.
+The infrared spectrum lies just outside the red end of the
+visible spectrum, possessing wavelengths longer than red light.
+One of the salient features of infrared radiation is its ability to
+be absorbed and re-emitted by objects, making it an invaluable
+indicator of temperature or heat. Consequently, infrared sen-
+sors are frequently employed for night vision, thermal imag-
+ing, and certain specialized medical applications [6]. While
+both spectral bands have constraints in adverse conditions,
+multi-spectral imagery offers significant complementarity in
+terms of environmental adaptability (e.g., smoke, obstructions,
+low light) and distinct visual features (e.g., resolution, contrast,
+texture detail). To build on the complementarity of infrared
+and visible spectra, it is essential to integrate the two to
+leverage their combined strengths. A straightforward way is
+to feed both infrared and visible images directly into neural
+networks, allowing for decision-level fusion to accomplish
+various tasks. However, this method overlooks the advantages
+of generating a fused image, which can enhance information
+representation, reduce noise, and simultaneously satisfy ob-
+servational requirements while better supporting wide practical
+applications, such as remote sensing, military surveillance, and
+autonomous driving, to name a few [7].
+Since 2018, learning-based IVIF approaches have under-
+gone substantial development due to the robust non-linear
+fitting capabilities provided by deep learning techniques. These
+learning-based solutions, compared to their conventional coun-
+terparts, exhibit superior visual quality, robustness, and com-
+putational efficiency, thereby attracting increasing attention.
+In terms of these approaches, they often achieve the state-of-
+the-art performance on various benchmarks, ranging from the
+early image fusion approaches for only visual enhancement to
+recent data compatibility/task adaptability approaches.
+arXiv:2501.10761v1  [cs.CV]  18 Jan 2025
+
+===== PAGE 2 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 2
+400nm 500nm 600nm 700nm
+Visible Spectrum (380-790nm)
+Traditional Visible Image Dataset (e.g. CoCo) RGB-T Dataset (e.g. M FD) RGB-T Dataset (e.g. M FD) Remote SensingRGB-NIR Dataset 
+Ultraviolet
+(UV)
+Infrared Ray (IR)
+(NIR)
+Near Infrared
+2500nm 25000nm(MIR)
+Mid Infrared
+(FIR)
+Far Infrared
+Long
+Wavelengths
+High
+Frequency1 kilometer10 meter31 millimeter10 meter-31k nanometer10 meter-61 nanometer10 meter-910 meter-12 10 meter0
+Gamma Ray X- Ray Ultraviolet Infrared Ray Microwave Radar Radio Broadcast band
+3 3
+Fig. 1. A detailed spectrogram depicting almost all wavelength and frequency ranges, particularly expanding the range of the human visual system and
+annotating corresponding computer vision and image fusion datasets [5].
+This manuscript provides a comprehensive overview of
+recent advancements in the fusion of infrared and visible
+images via deep learning, with a particular emphasis on
+proposals aimed at practical applications. Although there are
+existing surveys [8], [9] in the literature concerning infrared
+and visible image fusion, our work stands out distinctly. Our
+focus is sharply on IVIF techniques with multi-dimensional
+insights (data, fusion and task), in contrast to the majority of
+previous works that primarily aim to survey either traditional
+or learning-based IVIF approaches.
+Distinctly, our survey adopts a more general viewpoint,
+scrutinizing various key factors essential for a deeper un-
+derstanding of designing deep networks tailored for practical
+applications. Importantly, we underscore the crucial role of
+preliminary data compatibility and subsequent tasks, both of
+which are pivotal when applying IVIF to practical scenarios.
+Hence, this survey represents the inaugural effort to provide an
+insightful and systematic analysis of the recent advancements
+in a multi-dimensional manner. This work is poised to inspire
+new research endeavors within the community, serving as a
+catalyst for further exploration and development in the field.
+The main contributions of this study are fourfold.
+• To the best of our knowledge, this survey paper is
+unprecedented in its focus on uniformly understanding
+and organizing learning-based infrared and visible im-
+age fusion approaches from a multi-dimensional per-
+spective (data, fusion and task). We review over 180+
+learning-based approaches. A glimpse of the overall
+structure of the paper is depicted in Figure 2.
+• We engage in a deep discussion regarding each perspec-
+tive, in terms of recently employed architectures and
+loss functions. We also summarize a look-up Table I
+to discuss the core idea of the representative methods,
+thereby providing significant convenience for researchers
+who embark on subsequent studies in this domain.
+• To shed light on application-orient infrared and visible
+image fusion approaches, we offer a systematic overview
+of recent advancements in techniques and datasets in a
+hierarchical and structured manner. Notably, we are the
+first to compare the fusion performance of preliminary
+registration and subsequent tasks, such as object detection
+and semantic segmentation.
+• We address the challenges and open issues, identifying
+emerging trends and prospective directions to furnish the
+community with insightful guidance.
+Fig. 2. A knowledge graph of our survey. We first understand IVIF from
+three different dimensions, and then we elaborate it on the fusion around
+seven specific aspects.
+A. Scope
+Image fusion, a foundational image enhancement technique,
+encompasses various branches, including but not limited to in-
+frared and visible image fusion. Undertaking a detailed review
+of these interrelated technologies within a single manuscript
+is impractical. In this work, our primary focus is on learning-
+based infrared and visible image fusion, with a selective
+introduction of representative methods from related fields.
+This paper predominantly centers on significant advancements
+made over the past six years, with particular attention to
+works published in top-tier conferences and journals. Besides
+elucidating the technical details of learning-based infrared and
+visible image fusion approaches, the survey also outlines tax-
+onomies, popular datasets, potential challenges, and research
+directions.
+B. Organization
+The manuscript is organized as follows. Section II provides
+a concise introduction to the infrared and visible image fusion
+
+===== PAGE 3 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 3
+Visual enhancement
+Semantic Information
+Infrared and Visible Image Fusion for Applications
+Image FusionData Task
+Compatibility Adaption
+Misaligned
+ Attack
+Seg
+Det
+SOD
+Fusion Network
+ …Task Network
+Fig. 3. The diagram of infrared and visible image fusion for practical applications. Existing image fusion methods majorly focus on the design of architectures
+and training strategies for visual enhancement, few considering the adaptation for downstream visual perception tasks. Additionally, from the data compatibility
+perspective, pixel misalignment and adversarial attacks of image fusion are two major challenges. Additionally, integrating comprehensive semantic information
+for tasks like semantic segmentation, object detection, and salient object detection remains underexplored, posing a critical obstacle in image fusion.
+task with a focus on its applications. In Section III, we intro-
+duce a novel taxonomy that categorizes existing approaches
+into three dimensions. Additionally, this section delves into
+the fundamental components of network architectures and
+associated loss functions. This comprehensive overview facil-
+itates beginners in grasping the essentials and aids seasoned
+researchers in developing a more structured and profound
+understanding of the domain. Section IV enumerates the
+widely-accepted benchmarks and evaluation metrics pertinent
+to the field. Section V showcases a thorough evaluation of
+our approach, detailing both qualitative and quantitative results
+across tasks such as registration, fusion, and other subsequent
+downstream operations. Potential avenues for future research
+are highlighted in Section VI. The manuscript concludes with
+a summary in Section VII.
+II. T ASK
+Given a pair of infrared and visible image captured by
+different sensors, the goal of IVIF is to generate a signal image
+that has complementary and comprehensive information than
+either one. Visible images, are generated when sensors utilize
+light reflecting off various scenes and objects, effectively
+presenting detailed texture information of the environment.
+However, these images are easily affected by factors such as
+ambient lighting, brightness, and adverse weather conditions.
+In contrast, infrared sensors image through detecting thermal
+radiation, which accentuates the overall contours of objects,
+potentially resulting in blurred features, low contrast, and
+diminished texture information. To capitalize on the strengths
+of both technologies, a combination of infrared and visible
+imaging can be used to extract comprehensive information,
+thereby enhancing scene understanding. This synergy enables
+practical applications, e.g., intelligent system, in reality to
+maintain robust visual perception even in environments char-
+acterized by dynamic and harsh conditions.
+When applying IVIF to practical applications, two key
+factors should be careful considered. (i) Most of existing ap-
+proaches need pixel-level registered infrared and visible image
+pairs for fusion. However, due to the significant differences
+in the viewpoints, pixel distributions, and resolutions of the
+infrared and visible senors, obtaining accurately registered
+data is extremely challenging. (ii) A part of approaches focus
+on seeking visual enhancement while ignore to boost the
+performance of the follow-up high-level vision tasks, e.g.,
+object detection, depth estimation, and semantic segmentation.
+Hence, the generated fused images are difficult to be directly
+applied in intelligence systems with perception requirements.
+A completed pipeline of IVIF for practical applications is
+given in Figure 3.
+In summary, the total goal of IVIF is to generate a fused
+image that not only can realize visual enhancement but also
+boost environment perception rate.
+III. L ITERATURE SURVEY
+In this section, we first introduce a taxonomy for IVIF
+task from a multi-dimensional perspective, and then provide a
+detailed discussion in terms of widely used components of
+architectures and loss functions. The overview of our new
+taxonomy is given in Figure 4 and Table I.
+A. Fusion for Visual Enhancement
+1) AE-based Approaches: Auto-Encoder (AE)-based meth-
+ods [10]–[18] consist of two steps. First, an autoencoder is
+pre-trained using visible and/or infrared images. Second, the
+trained encoder is used for feature extraction, and the trained
+decoder is used for image reconstruction. The fusion between
+the encoder and decoder is usually performed according to
+manual fusion rules or is learned through a second training
+step using visible-infrared image pairs, as shown in Figure 5.
+Existing AE methods can be divided into two categories:
+i) Enhancements in fusion rules and data integration, aimed
+at improving multi-modality feature synthesis.
+ii) Innovations in network architecture, which include new
+layer introductions and connection modifications.
+Fusion Rules. DenseFuse [19], a pioneer in fusion strategy
+methods, introduces two core approaches: an addition strategy
+for combining encoder-generated feature maps and an l1-norm
+based strategy using softmax to select prominent features.
+These dual strategies yield superior over traditional methods.
+To further enhance feature integration and emphasize crucial
+information, Li et al. [20] innovate by merging a nested
+connection network with spatial/channel attention models for
+infrared-visible image fusion. It highlights spatial and channel
+importance via attention models, enhancing multi-scale deep
+feature fusion and surpassing other methods in objective and
+subjective evaluations.
+
+===== PAGE 4 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 4
+Methods Publication Y ear Aspects Data Compatible Application Dataset
+3
+Fig. 4. A classification sankey diagram containing typical fusion methods.
+Network Architecture. RFN-Nest [21] distinguishes itself
+with a novel network architecture, introducing a Residual
+Fusion Network (RFN) that targets the enhancement of deep
+feature-based image fusion, focusing particularly on the so-
+phistication of network design to preserve intricate details.
+Addressing the intricacies of infrared-visible image fusion,
+Liu et al. [22] advance the field with its innovative network
+structure that incorporates multi-scale feature learning and an
+edge-guided attention mechanism, optimizing the architecture
+to enhance detail definition while reducing noise. In the realm
+of network innovation, Zhao et al. [23] employ an auto-
+encoder with a specialized design to segregate and integrate
+background and detail features effectively, emphasizing the
+strategic network modifications for thorough feature amal-
+gamation. Extending the focus on network-driven solutions,
+Zhao et al. [24] utilize algorithm unrolling to reconceptualize
+traditional optimization into a structured network process,
+meticulously engineered to segregate and fuse different fre-
+quency information, highlighting the strategic architectural
+advancements for improved fusion outcomes.
+2) CNN-based Approaches: In CNN-based image fusion al-
+gorithms [25]–[35], the process generally involves three main
+steps: feature extraction, fusion, and image reconstruction, as
+shown in Figure 5. The key advantage of such algorithms lies
+in their ability to autonomously learn complex and high-level
+features from data.
+In the realm of CNN-based methods for image fusion, three
+innovative approaches stand out:
+i) Optimization-inspired CNN methods leverage iterative in-
+tegration and learnable modules for enhanced fusion efficiency.
+ii) Modifying loss functions crucially defines the unsuper-
+vised learning outcomes in IVIF tasks.
+iii) Architectural advancements focus on optimizing net-
+work designs, with NAS as a specialized approach for struc-
+tural refinement.
+Optimization-inspired. Based on the natural priors of
+modal characteristics, optimization-model-inspired learning
+models are proposed for infrared and visible image fusion [24],
+[36], [37]. These methods usually introduce the network into
+the iteration process, guided by the optimization objective, or
+replace the numerical operations with learnable modules. Li et
+al. [36] introduce LRRNet, applying Low-Rank Representa-
+tion to network design, thus enhancing interpretability. Liu et
+al. [37] present a bi-level optimization-based fusion method,
+focusing on image decomposition. Zhao et al. [24] employ
+algorithm unrolling for image fusion, targeting low/high-
+frequency information across modalities.
+Loss Functions . Loss functions are crucial objectives, and
+for the unsupervised image processing task of IVIF, their setup
+is of significant importance. PIAFusion [38] employs an inno-
+vative illumination-aware loss, guided by a sub-network that
+assesses scene lighting, significantly improving image fusion
+under various lighting conditions. Expanding on context-aware
+processing, STDFusionNet [39] uses a loss function enhanced
+by a salient target mask to prioritize the integration of criti-
+cal infrared features with visible textures, greatly improving
+feature integration and image clarity.
+Structures. Early works focusing on network structures
+concentrated on the utilization and fine-tuning of architectures
+like residual networks [28], [40]–[43], dense networks [41],
+[44]–[50], and U-Net, which will not be elaborated here. The
+methods introduced here, which focus on designing network
+structures, mostly incorporate novel technical approaches to
+upgrade fusion algorithms.
+
+===== PAGE 5 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 5
+Fusion
+Rule
+IR
+VIS
+VIS
+Fused
+Reconstructed
+Encoder
+Encoder
+Decoder
+Decoder
+Training
+Testing
+IR
+VIS
+Fused
+Extraction Decoder
+End-to-end Moudle
+Auto-encoder
+Transformer
+Convolutional Neural Network
+Generative Adversarial Network
+Gernernal Methodology 
+(a) One Generator with One Discriminator
+(b) One Generator with Two Discriminators
+Fig. 5. The basic phased processes of AE / CNN / GAN / Transformer-based IVIF methods.
+IGNet [51] innovatively combines CNN and Graph Neural
+Network (GNN) for infrared-visible image fusion. It starts
+with CNN-based multi-scale feature extraction, then employs
+a Graph Interaction Module to transform these features into
+graph structures for effective cross-modality fusion. Addition-
+ally, its leader node strategy in GCNs boosts information prop-
+agation, thereby preserving texture details more efficiently.
+Yue et al. introduce Dif-Fusion [52], utilizing diffusion models
+to construct multi-channel distributions, enabling direct gen-
+eration of chromatic fused images with high color fidelity.
+Specially, Neural Architecture Search (NAS) has achieved
+widespread developments for image fusion in recent years,
+which can automatically discover the desired architectures,
+avoiding massive handcrafted architecture engineering and
+dedicated adjustments. As for the construction of super-net,
+SMoA [53] is proposed based on the auto-encoder paradigm,
+adequately representing the typical features based on two
+modality-specific encoders. To tackle blurred targets and de-
+tail loss, Liu et al. [54] develop a hierarchically aggregated
+fusion method, aiming for comprehensive target and detail
+representation. Furthermore, Liu et al. [55] propose a hardware
+latency-aware approach for crafting lightweight networks, re-
+ducing computational demands and aiding practical deploy-
+ment. Recently, an implicitly-search strategy [56] is proposed
+with sufficient convergence of fusion, showing remarkable
+performances compared with existing methods [57], [58].
+3) GAN-based Approaches: Generative Adversarial Net-
+work (GAN) [59] has demonstrated its effectiveness in mod-
+eling data distributions without label supervision. This unsu-
+pervised approach naturally suits the IVIF task, where GAN
+has become a major methodology. Existing methods can be
+classified into two categories, as shown in Figure 5:
+i) Single discrimination [60]–[70] utilizes the original GAN
+to constrain the fused images as similar as one modality.
+ii) Dual discrimination [29], [71]–[83] utilizes two discrim-
+inators to balance the typical modality information.
+Single discrimination. Ma et al. firstly propose the Fu-
+sionGAN method [65], which contains a generator, aiming to
+preserve the infrared intensities and textural details, and one
+discriminator, guaranteeing the textural details in the visible
+images. Subsequently, the same team [84] further improves
+the FusionGAN with two loss functions. The detail loss and
+edge loss are proposed to constrain the target boundaries of in-
+frared targets for the FusionGAN. Amounts of methods focus
+on designing optimal generators to produce visual-appealing
+results. For instance, Fu et al. [85] apply densely connected
+blocks to construct the generator for preserving the textural
+details of fused images. Ma et al. propose GANMcC [66],
+introducing a more balanced training with multi-classification
+for visible and infrared images. The generator consists of two
+sub-modules, including the gradient path for extracting texture
+details and the contrast path for intensity information.
+Dual discrimination. Xu et al. propose the DDcGAN [71],
+utilizing two discriminator to enforce the similarity with dif-
+ferent modalities. Ma et al. extend the DDcGAN by replacing
+the U-Net generator with densely connected blocks [72]. Fol-
+lowing this paradigm, lots of methods are designed with one
+generator and two discriminators. Li et al. propose Attention-
+FGAN [73], introducing the multi-scale attention mechanisms
+into the construction of generator and discriminator. By the
+supervision of the attention loss, this method can keep the
+information of attention regions of source images. Zhou et al.
+propose the SDDGAN [74], designing information quantity
+discrimination to estimate the informative richness. Gao et
+al. [76] construct the generator with dense connection and
+multi-scale fusion and propose the reconstruction losses of
+content and modality. Rao et al. [77] present the attention
+and transition modules to composite the generator, to filter
+
+===== PAGE 6 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 6
+out the noise and enhance the quality in adverse conditions.
+Wang et al. [86] utilizes dual discriminators in ICAFusion to
+ensure balanced fusion by matching the distribution of fused
+results with source images, while interactive attention mod-
+ules enhance feature extraction and reconstruction. Further,
+they developed FreqGAN [87], incorporating dual frequency-
+constrained discriminators that dynamically adjust the weights
+for each frequency band.
+The main drawback of single discrimination is that most
+of methods only provide one single modality supervision,
+making the fused images similar either to visible modality
+or infrared modality ( i.e., modality unbalance), which causes
+the complementary features ( i.e., pixel intensities of infrared
+images and texture details of visible images) cannot be
+preserved simultaneously. Therefore dual discrimination for
+diverse modality are introduced to address this issue. However,
+the major obstacle of dual discrimination is to guide modality-
+specific discriminator to extract diverse modality characteris-
+tics including the salient objects from thermal radiation and
+rich textural details from visible modality.
+4) Transformer-based Approaches: Benefiting from the
+strong representation capabilities and long-range dependencies
+based on self-attention mechanisms, researchers are looking at
+ways to leverage this mechanism into infrared-visible image
+fusion [88]–[93]. Transformer-based fusion methods mostly
+utilize the combined CNN-transformer network, aggregating
+the CNN blocks to extract the shallow features and leveraging
+the transformer blocks to construct the long-range dependence.
+VS et al. [94] pioneer the use of Transformers for image
+fusion, introducing a multi-scale auto-encoder and a spatio-
+transformer fusion strategy to aggregate local and global
+feature information. Ma et al. [95] present the SwinFusion,
+leveraging the swin transformer [96] to construct two kinds of
+attention modules. The self and cross-attention mechanisms
+are proposed to integrate the long-range dependency between
+specific modalities and cross-domain. Tang et al. present a y-
+shape transformer YDTR [97] to construct the encoding and
+decoding branches by the combination of CNN and transform-
+ers, cascading vision transformer blocks [98]. Furthermore,
+Tang et al. [99] presents the local-global parallel architecture,
+consisting of local feature extraction and global feature extrac-
+tion modules to better describe local complementary features
+with local complementary features. Lately, DATfusion [100]
+has been proposed to realize the image fusion via the inter-
+action of dual attention and transformer block, which plays
+a vital role in preserving vital features and global informa-
+tion preservation. {CMTFusion [101] introduces cross-modal
+transformers to efficiently retain complementary information
+by removing spatial and channel redundancies, with a gated
+bottleneck enhancing cross-domain interactions for improved
+feature fusion. Yi et al. [102] apply a Transformer-based model
+Text-IF for text-guided fusion, addressing degradation and
+enabling interactive outcomes by leveraging a text semantic
+encoder and semantic interaction fusion decoder. Zhao et
+al. [103] introduce CDDFuse, a dual-branch Transformer-
+CNN framework for IVIF that uses decomposition to extract
+cross-modality features and hybrid modules from Restormer
+[104] for lossless information transmission. Liu et al. [105]
+leverages prompt-based learning from Vision-Language Mod-
+els to guide image fusion, enhancing target identification and
+fusion quality through semantic prompts.
+Transformer-based approaches effectively capture long-
+range dependencies, crucial for understanding cross-modality
+relationships, while self-attention helps retain global context
+in image fusion. However, these methods demand high com-
+putational resources and large memory, making real-world
+deployment challenging.
+Fusion-based Perception
+Cascaded Architecture
+Fig. 6. The basic phased processes of application-oriented IVIF methods.
+B. Application-oriented
+Multi-modality infrared and visible image fusion has gained
+significant attention due to its broad range of real-world
+applications ( e.g., automatic driving and robotic operations).
+Among all the tasks, object detection and semantic seg-
+mentation have become particularly central, as they are the
+most relevant tasks connected to fusion-related applications,
+as shown in Figure 6. Numerous methods and datasets have
+been proposed to tackle these challenges, making them critical
+topics of interest and key directions for future research.
+In this part, we will delve into the methods specifically
+developed for these two tasks and offer a detailed exploration
+of their recent progress, while also introducing other relevant
+tasks within this domain.
+1) Object detection: As for object detection, Liu et al.
+pioneered the exploration of image fusion and object detection,
+termed TarDAL [79] with the largest multi-modality object de-
+tection datasets M 3FD. TarDAL proposed a bi-level optimiza-
+tion formulation to model the inherent relationship between
+both tasks and unroll the optimization for a target-ware bi-
+level learning network. Zhao et al. [106] introduce the meta-
+feature embedding to achieve the compatibility between object
+detection and image fusion. Sun et al. present the impressive
+DetFusion [107], leveraging the detection-driven information
+to guide the optimization of fusion by shared attention mecha-
+nisms. The object-aware loss also plays a key role in learning
+the pixel-level information from object locations. Cao et al.
+propose the MoE-Fusion [108], integrating a mixture of local-
+global experts to dynamically extract effective features of
+respective modalities. This dynamic feature learning for local
+information and global contrast demonstrates the effectiveness
+of object detection. Zhao et al. propose MetaFusion [106],
+which leverages meta-feature embedding from object detection
+to align semantic and fusion features, enabling effective joint
+learning.
+In contrast to fusion-based methods, several approaches
+focus on object detection using infrared and visible images
+without producing fused images. These methods enhance
+detection by leveraging cross-modality interactions through
+
+===== PAGE 7 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 7
+attention mechanisms, iterative refinement of spectral features,
+probabilistic ensembling of detections, and aligning features
+between modalities for improved precision [109]–[112].
+2) Semantic Segmentation: For semantic segmentation,
+SeAFusion [113] cascades image fusion with segmentation
+tasks, introducing semantic loss to enhance the information
+richness of fusion through loop-based training. Tang et al.
+propose SuperFusion [114], a versatile framework for multi-
+modality image registration, fusion, and semantic perception.
+PSFusion [115] introduces progressive semantic injection at
+the feature level, considering the semantic needs for fusion.
+It also shows that with fewer computational resources, image-
+level fusion provides comparable performance to feature fu-
+sion for perception tasks. Lately, Liu et al. proposed Seg-
+MiF [116], which leverages dual-task correlation to enhance
+both segmentation and fusion performance, introducing hi-
+erarchical interactive attention for fine-grained task mapping
+and collecting the largest full-time benchmark for these tasks.
+Zhang et al. proposes MRFS [117], a coupled learning frame-
+work that integrates image fusion and segmentation through
+mutual reinforcement, achieving enhanced visual quality and
+more accurate segmentation results.
+In addition to other fusion-based segmentation methods,
+two-stream infrared-visible semantic segmentation has gained
+traction. These approaches typically fuse modality-specific
+features at either the encoder or decoder stage. Encoder-based
+fusion methods aggregate features early, as shown in works
+like [118]–[121], while decoder-based fusion combines fea-
+tures during reconstruction, as demonstrated in [122]–[125].
+Together, these two-stream methods complement the broader
+landscape of fusion-based semantic segmentation techniques.
+Recently, uniform solutions to bridge image fusion and
+semantic perception have become an attractive topic. Liu et al.
+[126] introduce the unified bi-level dynamic learning paradigm
+to guarantee image fusion that has visually appealing results
+and can serve downstream perception tasks. Liu et al. [127]
+use detection and segmentation tasks to guide the automated
+search process of the loss function, freeing up manual effort
+and enabling the construction of fusion methods for perception
+tasks in the CAF framework. TIMFusion [56] is proposed to
+discover hardware-sensitive networks through implicit archi-
+tecture search, achieving fast adaptation for diverse tasks via
+pretext meta-initialization, while enhancing visual quality and
+supporting various semantic perception tasks.
+3) Other perception tasks: Infrared and visible modalities
+are not only useful for fusion tasks but also play a key role in
+various other perception applications, such as object tracking,
+crowd counting, salient object detection, and depth estimation.
+Object Tracking [128]–[136] utilizes pixel-wise, feature-
+level, and decision-based fusion of RGB-T modalities to
+enhance tracking robustness and reliability. Crowd Count-
+ing [137]–[143] benefits from multi-modality feature fusion
+to improve density estimation and crowd prediction. Salient
+Object Detection [144]–[148] leverages two-stream frame-
+works and fusion modules to combine complementary cues
+from RGB-T data for more accurate object delineation. Depth
+Estimation [54], [101], [149]–[151] is enhanced by spectral
+transfer and style transfer methods to handle varying illumi-
+nation conditions and improve cross-modality matching.
+C. Data Compatible
+1) Registration-free approaches: A plethora of fusion
+methods tailored for well-aligned multi-modality images have
+emerged, while fusion methods designed for imperfectly
+aligned multi-modality images have just started to draw atten-
+tion. Existing fusion methods for imperfectly aligned multi-
+modality images can be divided into two categories:
+i) Generation of pseudo labels, which transforms multi-
+modality registration into single-modality registration, called
+Style Transfer-based Methods.
+ii) Construction of a modality-independent feature space,
+where multi-modality image features are mapped to a shared
+space and shared features are utilized to predict deformation
+fields, called Latent Space-based Methods.
+Style Transfer-based Methods. A general scheme involves
+the joint learning of the Modality-Transfer Network (MTN)
+and Spatial-Transformation Network (STN). Due to the lack
+of direct supervision between cross-modality images, existing
+methods [152]–[154] utilize MTN to transform images from
+one modality to another, thereby generating corresponding
+pseudo-labels. Subsequently, STN is employed to predict
+the spatial displacements between the source image and the
+pseudo-labeled image.
+Nemar [152] pioneers the use of mono-modality metrics for
+training multi-modality image registration. It utilizes a bidirec-
+tional training approach, with options for “spatial registration
+first, image translation later” and “image translation first, spa-
+tial registration later”, which encourages the image translation
+network to generate pseudo-labeled images with preserved
+geometric properties, leading to improved registration.
+UMFusion [153] proposes a highly robust unsupervised
+framework for infrared and visible image fusion, focusing
+on alleviating ghosting artifacts caused by misaligned multi-
+modality images. Specifically, a cross-modality generation-
+registration paradigm is introduced to generate pseudo labels,
+aiming to reduce large modality discrepancies between in-
+frared and visible images from pixel level.
+With similar goals, RFNet [154] achieves the registration
+and fusion of multi-modality images through mutual rein-
+forcement, rather than treating them as independent optimiza-
+tion objectives. In RFNet, multi-modality image registration
+is defined as a coarse-to-fine process, and fine registration
+and fusion are synergistically combined through interactive
+learning to improve the quality of fused images and strengthen
+the reciprocal promotion effect of fusion on registration.
+Latent Space-based Methods. The main idea is to ex-
+tract common features from multi-modality images, which
+reduces modality discrepancies between infrared and visible
+images from the feature level. Typically, MURF [155] argues
+that modality-independent features are crucial for registra-
+tion, and therefore proposes to map multi-modality features
+into a modality-independent shared space. MURF divides
+the registration into two stages, i.e., coarse registration and
+fine registration. In the coarse registration stage, contrastive
+
+===== PAGE 8 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 8
+Source Images FusedGeneral Framework
+Registration General Fusion Network
+Adversarial Attack(a) Style Transfer-based Registration-Fusion Paradigm
+(b) Latent Space-based Registration-Fusion Paradigm
+Fig. 7. The basic phased processes of data compatible IVIF methods.
+learning is used to constrain the generation of shared feature
+representations. Two other methods, SuperFusion [114] and
+ReCoNet [156], learn deformation parameters for registration
+directly from cross-modality features. The former corrects
+the geometric distortion of the inputs by estimating the bidi-
+rectional deformation fields under the supervision of photo-
+metric and endpoint constraints and symmetrically combines
+registration and fusion to achieve mutual promotion. The
+latter develops a recurrent correction network to explicitly
+compensate for geometric distortions, which in turn alleviates
+ghosts in fused images.
+2) General fusion approach: In multi-modality image fu-
+sion research, a general fusion framework serves as a vital
+technique for integrating different imaging technologies. These
+frameworks demonstrate potential applications in fields such
+as medical imaging and infrared and visible imaging, due
+to their algorithmic generality and superior scalability. They
+accomplish comprehensive feature extraction, from textural
+details to high-level semantic information, through in-depth
+feature learning and structural optimization. Moreover, these
+frameworks make use of diverse loss functions, like perceptual
+and structural similarity loss, to ensure the quality and integrity
+of the fused images. To address the core aspects of general
+fusion frameworks in multi-modality image fusion:
+i) Loss Function Enhancements: Innovations focus on ad-
+vanced loss metrics to enhance image quality.
+ii) Architectural Innovations: Upgrades target better feature
+extraction and network efficiency.
+Loss function innovation is pivotal for improving fusion
+model performance. Key developments include: Zhang et
+al. [164] pioneer with a perceptual loss-trained convolutional
+framework, achieving detailed enhancement and broad task
+applicability without post-processing. Xu et al. [162] innova-
+tively use information theory for input weighting, enhancing
+loss optimization and task unification. Xu et al. [166] employ
+NR-IQA and entropy for weight adjustment, ensuring stable
+quality and reducing ground truth reliance. Lastly, Liu et
+al. [167] leverage contrastive learning for loss refinement,
+boosting cross-modal consistency and information retention.
+Zhao et al. propose EMMA [170], a self-supervised learning
+paradigm that refines conventional fusion loss by incorporating
+TNO RoadScene VIFB
+LLVIP MS M3FD
+MFNet
+FMB
+Fig. 8. An illustration of existing IVIF datasets.
+a pseudo-sensing module and sensing loss, effectively simu-
+lating the perceptual imaging process.
+Structure. The structural evolution is characterized by
+innovative designs tailored for multi-modal data integration: Li
+et al. [171] introduce a framework with multiple task-specific
+encoders and a universal decoder, enhancing the precision
+of feature extraction and facilitating knowledge exchange
+across various fusion tasks. Liu et al. [56] leverage Implicit
+Architecture Search (IAS) to dynamically optimize the model
+structure, incorporating insights from related perception tasks
+to improve unsupervised learning and model versatility. Liu et
+al. [37] advance structural optimization in multi-modal fusion
+by segregating base and detail layers processing, employing a
+bilevel optimization to refine texture and detail representation
+while ensuring structural integrity in the fused output. Zhao et
+al. propose FILM [169], a method leverages large language
+models by generating semantic prompts from images, using
+ChatGPT to produce textual descriptions that guide the fu-
+sion process through cross-attention, enhancing both feature
+extraction and contextual understanding.
+3) Attack: Adversarial attacks [172], [173], which add
+indistinguishable perturbations to images, are easy to fool
+the estimation of neural networks. The basic workflow is
+plotted in Figure 7. The vulnerability of networks for multi-
+modality vision under adversarial attacks has not been widely
+investigated. Considering the robustness of multi-modality
+segmentation against adversarial attacks, PAIFusion [161] is
+the first to leverage image fusion to enhance robustness. This
+work identifies fragile fusion operations and rules through
+detailed analysis. In our view, this is an urgent and challenging
+topic for future research, as it plays a crucial role in ensuring
+the robustness and safety of real-world applications.
+
+===== PAGE 9 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 9
+TABLE I
+AN OVERVIEW OF REPRESENTATIVE DEEP LEARNING-BASED IVIF METHODS.
+Aspects Methods Publication F D T Core Ideas
+Fusion for Visual Enhancement
+DenseFuse [19] TIP ✓ - - Dense connection feature extraction with l1-norm fusion rule
+SEDRFuse [12] TIM ✓ - - Symmetric residual block feature extraction with attention-guided fusion rule
+DIDFuse [23] IJCAI ✓ ✓ - Proposing a data-driven auto-encoder based feature decomposition network
+MFEIF [22] TCSVT ✓ - - Multi-scale feature extraction with edge attention fusion rule
+Auto-Encoder RFN-Nest [21] TIM ✓ - ✓ Residual fusion network with learnable fusion rule
+Re2Fusion [13] TIM ✓ - - Dense Residual structure with double no-nlocal attention fusion models
+SMoA [53] SPL ✓ - - Automatic feature extractor with salient weight based fusion rule
+SFAFuse [18] InfFus ✓ - - Extract features with adaption via a self-supervised strategy
+FusionGAN [65] InfFus ✓ - - Signal discriminator to keep both the thermal radiation and the texture details
+TCGAN [157] TMM ✓ - - Transformer-based conditional GAN for prior knowledge integration
+DPAL [84] InfFus ✓ - - Designing detail loss and target edge-enhancement loss to improve the quality
+AtFGAN [73] TMM ✓ - - Integrate multi-scale attention mechanism into both generator and discriminator
+GAN D2WGAN [80] InfSci ✓ - - Keeping pixel intensity and texture information by dual wasserstein discriminators
+GANMcC [66] TIM ✓ - - GAN with multi-classification constraints for addressing unbalanced fusion
+DDcGAN [72] TIP ✓ ✓ - Dual discriminators for main the details/content from visible/infrared image
+ICAFusion [86] TMM ✓ ✓ - Dual cross-attention feature fusion with iterative interaction mechanism
+FreqGAN [87] TCSVT ✓ ✓ - Wavelet-based decomposition with feature aggregation for detail preservation
+RXDNFuse [41] InfFus ✓ - - Aggregated residual dense network for overcoming the manual fusion rule
+STDFusionNet [39] TIM ✓ - - Salient target detection weight map in the loss function
+MetaFusion [106] CVPR ✓ - - Meta-feature embedding model is designed to generate object semantic features
+BIMDL [37] TIP ✓ ✓ - Layer-guided bilevel optimization modeling with adaptive weight integration
+AUIF [24] TCSVT ✓ ✓ - Presenting an algorithm unrolling based interpretable fusion network
+LRRNet [36] TPAMI ✓ - ✓ Designing learnable representation model with detail-to-semantic loss function
+CNN MgAN-Fuse [81] TIM ✓ - - Implanting multigrained attention to preserve the foreground target/context
+CUFD [49] CVIU ✓ - - Extracting shallow and deep features a with different emphases
+IGNet [51] ACMMM ✓ - ✓ Building cross-modality relationship via graph neural networks
+PSFusion [115] InfFus ✓ - - Designing progressive semantic injection and scene fidelity constraints
+Dif-Fusion [52] TIP ✓ - - Diffusion-based multi-channel fusion for better color fidelity and detail retention
+SwinFusion [95] JAS ✓ ✓ ✓ Integration of complementary information and global interaction via attention
+YDTR [97] TMM ✓ - - Acquiring the local/context information by a dynamic transformer module
+IFT [94] ICIP ✓ - - Developing a transformer-based rule to attends local and long-range information
+CDDFuse [103] CVPR ✓ ✓ ✓ Proposing a two-stream correlation-driven feature decomposition network
+Transformer TGFuse [158] TIP ✓ - - Learning the global fusion relations and reflecting the specific characteristics
+CMTFusion [101] TCSVT ✓ - - Gated bottleneck to integrate cross-domain interactions for source images
+Text-IF [102] CVPR ✓ - - Text-guided framework for degradation-aware and interactive processing
+PromptF [105] JAS ✓ - - Harmonized Semantic Prompt Learning for improved detail and target extraction
+Data Compatible
+GCRF [159] SR - ✓ - Constructing a general framework to explores generation registration pattern
+UMIR [152] CVPR - ✓ - Alleviating manual similarity measure by translation image-to-image network
+UMFusion [153] IJCAI ✓ ✓ - Style Transfer-based cross-modality generation-registration paradigm for fusion
+Registration MURF [155] TPAMI ✓ ✓ - Mutually reinforced registration and fusion via three well deigned module
+SuperFusion [114] JAS ✓ ✓ ✓ Estimating bidirectional deformation fields and integrate semantic constraint
+ReCoNet [156] ECCV ✓ ✓ - Developing a recurrent light network that corrects distortions and artifacts
+SemLA [160] InfFus ✓ ✓ - Explicitly embedding semantic information at all stages of the network
+Attack PAIFusion [161] ACMMM ✓ - ✓ A perception-aware network to improve robustness under adversarial attack
+U2Fusion [162] TPAMI ✓ ✓ - Feature measurement that automatically estimates corresponding source images
+SDNet [163] IJCV ✓ ✓ - Universal loss with squeeze and decomposition for multiple fusion tasks
+IFCNN [164] InfFus ✓ ✓ - Extracting the salient features with appropriate fusion
+PMGI [165] AAAI ✓ ✓ - Uniform loss function that divides the network into gradient and intensity
+General FusionDN [166] AAAI ✓ ✓ - IQA-based loss functions for general image fusion tasks
+CoCoNet [167] IJCV ✓ ✓ ✓ Couple contrastive constrains with adaptive loss function ensemble
+DDFM [168] ICCV ✓ ✓ ✓ Denoising diffusion sampling model and Bayesian rectification
+FILM [169] ICML ✓ - - Introducing a semantic prompt network based on vision-language models
+EMMA [170] CVPR ✓ - - Equivariant self-supervised learning with pseudo-sensing for feature consistency
+Application-oriented
+TarDAL [79] CVPR ✓ - ✓ Seeking common/unique modality features and joint learning by loss function
+DetFusion [107] ACMMM ✓ - ✓ Utilizing object-related information to guide the fusion process
+SeAFusion [113] InfFus ✓ - ✓ Cascading the fusion and segmentation module and leveraging the semantic loss
+SegMiF [116] ICCV ✓ - ✓ Joint learning fusion and segmentation features via cross modality attention
+Perception BDLFusion [126] IJCAI ✓ - ✓ Improving visual quality and semantic information via bi-level optimization
+IRFS [144] InfFus ✓ - ✓ Interactively reinforced multi-task framework to bridge fusion and SOD
+MoE-Fusion [108] ICCV ✓ - ✓ Dynamic framework with a mixture experts for prevent features lose
+TIMFusion [56] TPAMI ✓ - ✓ Implicit architecture search and support adaptation via meta initialization
+MRFS [117] CVPR ✓ - ✓ Coupled learning framework for enhancing fusion and segmentation
+MetaFusion [106] CVPR ✓ - ✓ Introducing a meta-feature embedding model with mutual promotion learning
+CAF [127] IJCAI ✓ - ✓ Automatic loss function design optimized by perception tasks.
+
+===== PAGE 10 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 10
+TABLE II
+ILLUSTRATION OF EXISTING ALIGNED MULTI -MODALITY DATASETS .1
+Dataset Img pairs Resolution Color Camera angle Nighttime Objects/Categories Challenge Scenes Annotation
+TNO [174] 261 768×576 ✗ horizontal 65 few ✔ ✗
+RoadScene [162] 221 Various ✔ driving 122 medium ✗ ✗
+VIFB [175] 21 Various Various multiplication 10 few ✗ ✗
+MS [176] 2999 768×576 ✔ driving 1139 14146 / 6 ✗ ✔
+LLVIP [177] 16836 1280×720 ✔ surveillance all pedestrian / 1 ✗ ✔
+M3FD [79] 4200 1024×768 ✔ multiplication 1671 33603 / 6 ✔ ✔
+MFNet [122] 1569 640×480 ✔ driving 749 abundant / 8 ✗ ✔
+FMB [116] 1500 800×600 ✔ multiplication 826 abundant / 14 ✗ ✔
+1 All dataset download links are organized in the GitHub repository provided in the abstract.
+D. Architectures Summary and Discussion
+Deep learning-based methods in image fusion are evolving
+by adopting increasingly complex modules for better model-
+ing, which are categorized by their network structures:
+Using Existing Architectures. Many studies [12], [19], [21]
+rely on established CNN structures like cascaded, residual, or
+densely connected blocks, leveraging their proven strengths in
+feature extraction and information integration.
+Complex Stacked Networks. Methods in this cate-
+gory [13], [28], [41], [46], [88], [178] intertwine different
+aforementioned blocks, enhancing deep processing for supe-
+rior fusion quality, and delving into the complementary aspects
+of various source images for finer fused results.
+Multi-Batch Architectures. Given the modality diversity
+in infrared-visible fusion, these architectures [22], [23], [107]
+incorporate specialized structures to address the varied inputs,
+using distinct network modules and parameters to optimize the
+fusion of disparate modal information effectively.
+Recursive Architectures. Emphasizing iterative informa-
+tion enhancement, this group uses recursive designs [156] and
+diffusion models [168] to progressively refine fusion quality,
+suitable for handling sequential data by capitalizing on prior
+information for ongoing image improvement.
+Overall, the research in infrared and visible image fusion is
+moving towards more complex and refined network structures
+to meet the complex demands fusion.
+E. Loss Function Summary and Discussion
+In the field of unsupervised infrared and visible image
+fusion, the design and selection of loss functions are of
+paramount importance. These functions can generally be un-
+derstood and classified across three main dimensions: pixel
+level, evaluative metrics, and data characteristics. (Note that
+this subsection does not discuss generative models such as
+GANs and diffusion models.)
+At the pixel level, L1 and MSE loss functions [19], [36],
+[156] assess image similarity through direct pixel compar-
+isons. SSIM [19], [21], [22], [94], [156], a key evaluative
+metric, extends this by considering image structure and quality,
+reflecting human visual perception. Loss functions targeting
+data characteristics, like image gradients [54], [166], focus on
+preserving detailed textures within the fusion process.
+Building on these foundations, more complex variants of
+loss functions have emerged to address specific challenges in
+image fusion. For instance, the application of Visual Salience
+Map (VSM [79], [116], [126]) at the pixel level represents
+an innovation, resulting in more nuanced fusion effects. At
+the evaluative metrics level, using less common metrics like
+Spatial Frequency (SF) [97] as loss functions emphasizes the
+frequency characteristics and visual effects of images, thus
+achieving effective fusion while maintaining visual comfort.
+Further, complex image feature-based loss functions, such as
+the maximization of gradients or edge extraction [51], [95],
+[100], [115], [153] and including perceptual and contrastive
+losses [167], provide deeper insights and solutions.
+The design of loss functions is diverse, and apart from the
+above-mentioned types, many specially designed losses have
+been introduced. Researchers can select, combine, and opti-
+mize these based on the characteristics of source images and
+task requirements, driving further development and innovation
+in the field of image fusion.
+IV. B ENCHMARK AND EVALUATION METRIC
+A. Benchmark
+With the advancement in the field of infrared and visible im-
+age fusion, numerous datasets have been proposed and utilized.
+They can be broadly categorized into three types: early fusion-
+oriented datasets, fusion datasets aimed at target detection, and
+fusion datasets for semantic segmentation. Table II provides
+a detailed overview of their respective characteristics, while
+Figure 8 displays typical image pairs from them.
+B. Evaluation Metric
+1) Fusion-oriented Metric: This section summarizes 9 fu-
+sion metrics: 5 reference-based (MI, VIF, CC, SCD, Q AB/F)
+and 4 no-reference metrics (EN, SF, SD, AG).
+Mutual Information (MI) [181] measures the information
+transferred from source to fused images. Visual Information
+Fidelity (VIF) [182] assesses fusion fidelity aligned with the
+human visual system, with higher values indicating better
+performance. Correlation Coefficient (CC) [8] evaluates how a
+fused image mirrors its sources, focusing on linear correlation.
+In contrast, Sum of Difference Correlation (SCD) measures
+the integration of unique information from source images.
+CC emphasizes existing relationships, while SCD targets new
+elements. Gradient-Based Fusion Performance (QAB/F) [183]
+assesses edge detail preservation, with scores near 1 indicating
+effective edge retention. Entropy (EN) [184] gauges informa-
+tion content in fused images but is sensitive to noise. Spatial
+Frequency (SF) [185] evaluates detail and texture sharpness,
+indicating richer edge and texture information with higher
+values. Standard Deviation (SD) [186] reflects image quality in
+terms of distribution and contrast, where higher contrast leads
+to greater SD values. Average Gradient (AG) [187] measures
+
+===== PAGE 11 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 11
+TABLE III
+QUANTITATIVE FUSION EVALUATION OF SEVERAL STATE -OF-THE -ART METHODS ON THREE DATASETS (TNO&R OADSCENE /M 3FD).
+Method MI VIF CC SCD Q AB/F EN SF SD AGT&R M3 T&R M3 T&R M3 T&R M3 T&R M3 T&R M3 T&R M3 T&R M3 T&R M3
+BDLFusion [126] 2.944 2.957 0.590 0.639 0.612 0.567 1.445 1.578 0.405 0.450 7.037 6.685 8.783 8.409 37.88 29.34 3.635 3.000
+CAF [127] 2.982 2.982 0.585 0.612 0.606 0.541 1.531 1.654 0.495 0.511 7.122 6.923 14.00 13.55 40.55 35.26 5.172 4.366
+CDDFuse [103] 3.113 3.909 0.657 0.793 0.607 0.535 1.717 1.646 0.490 0.615 7.406 6.904 17.65 14.73 54.26 37.21 6.334 4.861
+CoCoNet [167] 2.579 2.631 0.568 0.729 0.629 0.574 1.782 1.772 0.363 0.380 7.735 7.738 20.74 24.41 64.44 62.43 7.490 7.906
+DATFuse [100] 3.675 4.131 0.620 0.644 0.587 0.494 1.188 1.286 0.486 0.493 6.675 6.402 11.19 10.46 31.02 26.31 3.963 3.440
+DDcGAN [72] 2.407 2.542 0.439 0.602 0.592 0.540 1.499 1.665 0.321 0.481 7.430 7.424 11.38 15.63 50.40 48.89 4.368 5.578
+DDFM [168] 1.857 2.911 0.138 0.640 0.498 0.586 1.160 1.683 0.166 0.481 7.160 6.727 10.19 9.259 41.20 30.66 4.108 3.220
+DeFusion [179] 2.955 3.164 0.540 0.556 0.596 0.483 1.326 1.277 0.362 0.404 6.834 6.483 7.987 8.142 34.19 27.79 3.134 2.841
+DenseFuse [19] 2.859 2.914 0.583 0.603 0.591 0.586 1.472 1.506 0.383 0.375 6.752 6.427 8.198 7.594 31.14 25.13 2.743 2.654
+DetFusion [107] 2.463 2.498 0.546 0.596 0.627 0.573 1.532 1.619 0.494 0.526 7.028 6.727 12.21 11.24 37.44 30.71 4.905 4.171
+DIDFuse [23] 2.926 3.068 0.599 0.694 0.620 0.562 1.778 1.788 0.462 0.496 7.332 7.149 13.89 14.07 52.58 46.74 5.348 4.877
+EMMA [170] 3.139 3.816 0.643 0.769 0.596 0.502 1.652 1.494 0.449 0.592 7.035 6.910 15.23 15.22 54.25 38.27 5.919 5.338
+FusionDN [166] 2.785 2.961 0.579 0.703 0.606 0.561 1.681 1.809 0.462 0.511 7.418 7.335 14.57 15.01 48.40 46.38 5.789 5.354
+FusionGAN [65] 2.694 2.631 0.385 0.618 0.544 0.566 1.133 1.070 0.257 0.250 6.962 6.870 8.042 2.997 37.33 35.98 3.111 2.895
+GANMcC [66] 2.762 2.808 0.516 0.544 0.630 0.562 1.601 1.619 0.341 0.319 7.146 6.783 8.532 7.440 41.90 32.90 3.543 2.664
+FILM [169] 3.101 4.294 0.671 0.783 0.569 0.490 1.451 1.415 0.573 0.626 7.250 6.869 16.05 14.86 46.61 36.39 6.007 4.836
+IGNet [51] 2.106 2.115 0.580 0.610 0.579 0.526 1.468 1.663 0.489 0.431 7.235 7.033 13.89 12.92 44.81 41.21 5.767 4.696
+IRFS [144] 2.691 2.849 0.574 0.642 0.639 0.582 1.567 1.695 0.419 0.508 6.946 6.744 9.967 10.54 35.67 31.09 3.748 3.444
+LRRNet [36] 2.766 2.805 0.508 0.566 0.594 0.542 1.558 1.463 0.352 0.498 7.118 6.437 11.92 10.69 42.54 27.20 4.497 3.601
+MetaFusion [106] 2.160 2.363 0.569 0.842 0.589 0.555 1.563 1.686 0.370 0.413 7.384 7.289 24.85 25.31 52.19 44.24 9.520 8.833
+MFEIF [22] 3.122 3.114 0.633 0.660 0.633 0.578 1.617 1.647 0.460 0.482 6.991 6.676 9.147 8.764 38.40 30.12 3.590 3.097
+MoE-Fusion [108] 3.085 3.491 0.613 0.701 0.553 0.487 1.450 1.492 0.509 0.579 7.043 6.993 12.17 11.65 41.95 38.49 4.818 4.241
+MRFS [117] 2.927 3.247 0.595 0.682 0.580 0.460 1.501 1.243 0.403 0.549 7.393 6.940 10.60 12.11 52.08 39.93 4.040 3.984
+PAIFusion [161] 3.225 3.542 0.613 0.610 0.567 0.493 1.372 1.623 0.472 0.403 6.962 6.979 11.19 9.243 39.38 36.83 4.479 3.256
+PMGI [165] 3.077 3.117 0.483 0.495 0.582 0.522 0.784 1.229 0.216 0.255 6.266 6.305 5.440 6.183 22.03 23.47 2.207 2.185
+PromptF [105] 3.418 4.127 0.700 0.786 0.601 0.503 1.640 1.487 0.500 0.608 7.333 6.800 15.31 13.59 51.11 34.79 5.571 4.520
+PSFusion [115] 2.608 2.741 0.631 0.826 0.611 0.559 1.722 1.831 0.536 0.573 7.445 7.399 16.54 20.71 51.20 49.56 6.594 6.913
+ReCoNet [156] 2.985 3.066 0.540 0.577 0.578 0.470 1.510 1.438 0.376 0.485 7.051 6.679 10.00 13.63 41.88 35.81 3.810 4.205
+RFN-Nest [21] 2.677 2.881 0.526 0.583 0.631 0.572 1.737 1.727 0.316 0.406 7.282 6.864 7.297 7.724 44.80 33.64 3.164 2.856
+SDNet [163] 3.064 3.219 0.569 0.554 0.564 0.501 1.211 1.420 0.494 0.517 6.935 6.662 12.21 12.10 35.64 31.26 4.855 4.202
+SeAFusion [113] 3.016 3.574 0.619 0.722 0.596 0.524 1.594 1.586 0.497 0.598 7.299 6.846 15.82 13.95 49.01 35.44 6.211 4.780
+SegMiF [116] 2.811 3.052 0.669 0.804 0.611 0.559 1.683 1.744 0.540 0.653 7.257 6.983 14.78 14.25 49.18 37.70 5.684 4.822
+SHIP [180] 3.782 4.812 0.661 0.819 0.556 0.466 1.324 1.310 0.548 0.643 7.127 6.824 15.55 15.25 42.81 35.23 5.868 5.175
+SuperFusion [114] 3.451 3.445 0.622 0.627 0.580 0.533 1.457 1.545 0.487 0.479 7.092 6.757 12.06 10.31 42.68 32.64 4.365 3.498
+SwinFusion [95] 3.345 4.161 0.645 0.774 0.602 0.521 1.599 1.561 0.468 0.611 6.974 6.803 11.89 13.65 43.47 35.77 4.438 4.602
+TarDAL [79] 3.241 3.161 0.569 0.602 0.575 0.510 1.443 1.551 0.427 0.406 7.287 7.150 13.30 12.56 46.78 43.02 4.653 4.144
+Text-IF [102] 2.930 3.685 0.658 0.896 0.586 0.499 1.581 1.518 0.536 0.675 7.352 6.931 15.83 15.62 49.62 36.66 6.250 5.271
+TGFuse [158] 2.718 3.503 0.645 0.833 0.567 0.463 1.430 1.333 0.535 0.658 7.149 6.802 13.64 14.59 43.38 35.43 5.032 4.888
+TIMFusion [56] 3.656 2.745 0.635 0.543 0.553 0.310 1.281 0.554 0.402 0.498 7.081 6.712 11.93 13.42 41.37 39.01 4.361 4.348
+U2Fusion [162] 2.599 2.760 0.556 0.633 0.621 0.567 1.338 1.569 0.489 0.539 6.821 6.659 11.10 10.71 32.11 28.83 4.545 3.966
+UMFusion [153] 2.888 3.089 0.610 0.613 0.625 0.546 1.475 1.570 0.470 0.398 6.967 6.699 10.17 8.758 36.06 30.53 3.875 2.928
+YDTR [97] 2.976 3.183 0.588 0.635 0.620 0.554 1.420 1.506 0.436 0.478 6.842 6.547 10.03 10.10 34.84 28.00 3.684 3.304
+texture features and details, with higher AG values indicating
+enhanced fusion performance.
+2) Registration Metric: The registered results are subjected
+to evaluation utilizing three widely accepted metrics, namely
+Mean Squared Error (MSE) [188], Mutual Information (MI),
+and Normalized Cross Correlation (NCC) [189].
+MSE measures the average squared difference between
+pixels of two images, assessing their alignment. A lower MSE
+value signifies greater similarity, making it a crucial metric in
+image registration and fusion. MI introduced above is also a
+prevalent similarity metric within image registration. A higher
+MI means that the two images are well-aligned. NCC is a met-
+ric that assesses the similarity between corresponding windows
+within two images for evaluating registration accuracy.
+3) Perception Metric: This part introduces key metrics for
+segmentation and detection tasks.
+In semantic segmentation, Intersection over Union (IoU)
+measures the overlap between predicted and true areas, with
+mean IoU (mIoU) averaging across categories. Accuracy
+(Acc) indicates the proportion of correctly classified pixels,
+while mean Accuracy (mAcc) averages this across categories.
+In object detection, Recall and Precision, based on IoU
+thresholds, define true positives. Average Precision (AP) mea-
+sures single-class performance, and mean Average Precision
+(mAP) averages AP across all classes.
+V. P ERFORMANCE SUMMARY
+A. Image Fusion
+In this section, we employ the three most commonly used
+fusion datasets (TNO, RoadScene, and M 3FD) to compare the
+performance of various advanced fusion methods, using the
+pre-trained models released by the original authors.
+1) Qualitative Comparisons: We selected typical challeng-
+ing scenario images from M 3FD to evaluate the visualization
+effects of fusion, as shown in Figure 9. A major difficulty in
+this scenario is smoke, which is a challenging yet unnecessary
+element. IGNet avoids most of its impact but thus leans exces-
+sively towards the infrared image. While CoCoNet highlights
+information on people and background vehicles, it exhibits
+color deviation in the smoke-free background (the grassland
+in the red box). In contrast, CAF and MoEFusion partially
+avoid the impact of smoke while preventing color deviation.
+2) Quantitative Comparisons: The 9 fusion metrics intro-
+duced in Section IV-B are used to compare quantitative results,
+where 57 pairs from TNO, 221 pairs from RoadScene, and 300
+pairs from the M 3FD fusion dataset are randomly selected for
+calculation. The specific metrics are shown in Table III.
+In supervised metrics, methods using traditional source
+image-based loss functions have a significant advantage (e.g.,
+CC of DenseFuse) due to their thorough preservation of source
+image information. Methods optimized for segmentation also
+
+===== PAGE 12 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 12
+VisibleInfrared CoCoNetCDDFuseBDLFusion CAF
+DDFM DenseFuse DetFusion DIDFuse IF-FILM IGNet
+LRRNet MetaFusion MFEIF MoEFusion MRFS MURF
+PromptF ReCoNetPSFusion RFN-Nest SeAFusion SegMiF
+TarDAL TGFuse TIMFusion UMFusionU2Fusion YDTR
+Fig. 9. Compared with several state-of-the-art fusion methods on a typical image pair of M 3FD.
+UMFusion SuperFusion
+UMFusion SuperFusion
+ReCoNet SemLA
+SemLAReCoNet
+RFVIF
+RFVIF
+MURF
+MURF
+IMF
+IMF
+Visble
+Visble
+Infrared
+Infrared
+Fig. 10. Misaligned ompared with several state-of-the-art fusion methods on two typical image pairs.
+TABLE IV
+QUANTITATIVE FUSION EVALUATION OF CROSS -MODALITY MISALIGNED IMAGES ON THE ROADSCENE AND M3FD DATASETS .
+Methods RoadScene M 3FDMI VIF CC SCD Q AB/F EN SF SD AG MI VIF CC SCD Q AB/F EN SF SD AG
+UMFusion [153] 1.91 0.61 0.60 1.45 0.25 6.92 11.75 34.09 6.46 2.17 0.87 0.61 1.29 0.22 6.58 9.67 27.68 5.23
+SuperFusion [114] 2.25 0.62 0.54 1.39 0.29 7.08 14.43 41.62 7.47 2.09 0.71 0.61 1.37 0.33 6.61 12.74 29.95 6.44
+ReCoNet [156] 2.12 0.53 0.55 1.44 0.24 7.02 10.71 39.98 6.34 1.95 0.41 0.58 1.26 0.24 6.60 7.75 30.45 4.72
+RFVIF [190] 1.55 0.14 0.46 1.19 0.07 7.37 15.92 46.05 8.42 1.63 0.16 0.54 1.25 0.12 7.16 12.54 40.71 7.24
+SemLA [160] 1.81 0.53 0.52 1.26 0.15 6.89 14.86 36.55 5.44 1.94 0.48 0.56 1.23 0.16 6.74 14.08 31.99 4.41
+MURF [155] 1.83 0.42 0.56 1.40 0.23 7.17 16.00 40.79 8.00 1.88 0.31 0.57 1.28 0.22 6.78 12.84 32.32 6.21
+IMF [191] 2.10 0.64 0.59 1.51 0.28 7.10 13.74 38.94 6.78 2.27 0.79 0.54 1.54 0.31 6.69 21.07 30.51 7.88
+show advantages in visual fidelity metrics like VIF (e.g.,
+PromptF), as they fully leverage semantic information. In
+unsupervised metrics, CoCoNet, utilizing feature-level con-
+trastive loss to optimize the entire training process, achieves
+representation capabilities far beyond conventional loss func-
+tions, thereby standing out in performance.
+B. Registration-based Image Fusion
+We survey 7 misaligned multi-modality image fusion
+methods including UMFusion [153], SuperFusion [114], Re-
+CoNet [156], RFVIF [190], SemLA [160], MURF [155], and
+IMF [191], and evaluate their fusion performance with slight
+deformation using 9 widely-used metrics.
+1) Qualitative Comparisons: Figure 10 shows qualitative
+results of various fusion methods confronted with misaligned
+infrared and visible images.
+By observation, the style transfer-based registration and
+fusion methods (UMFusion and IMF) and the supervised Su-
+perFusion achieved comparable results, effectively correcting
+structural distortion and edge ghosts. In contrast, the latent
+space-based methods (RFVIF, SemLA and ReCoNet) still
+exhibited some residual deformations in the fused images.
+Additionally, the results suggest that IMF, MURF, and
+UMFusion exhibit superior rankings among the top three
+methods in terms of object saliency and texture richness in
+the fused images.
+2) Quantitative Comparisons: Table IV reports quantitative
+of misaligned infrared and visible images on the RoadScene
+and M 3FD datasets.
+Due to the use of ground truth deformation fields as super-
+vision, SuperFusion exhibits excellent performance on several
+reference-based metrics such as MI, VIF, CC, and Q AB/F.
+Moreover, style transfer-based registration-then-fusion
+methods ( e.g., UMFusion and IMF) achieve suboptimal
+results on reference-based metrics.
+In contrast, latent feature space-based methods outperform
+in several no-reference metrics ( e.g., EN, SF, SD, and AG).
+This phenomenon suggests that style transfer-based and
+latent feature space-based methods have their own strengths.
+The development of a framework capable of harnessing their
+respective advantages holds tremendous potential.
+C. Image Fusion for Object Detection
+In this part, we employ YOLO-v5 as the base detector, using
+
+===== PAGE 13 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 13
+BDLFusion
+DIDFuse
+MRFS
+SegMiF
+CDDFuse
+IGNet
+PromptF
+TGFuse
+DDFM
+MetaFusion
+ReCoNet
+U2Fusion
+CAF
+FILM
+MURF
+TarDAL
+CoCoNet
+LRRNet
+PSFusion
+TIMFusion
+DenseFuse
+MFEIF
+RFN-Nest
+UMFusion
+DetFusion
+MoEFusion
+SeAFusion
+YDTR
+Fig. 11. Object detection results based on image fusion compared with several state-of-the-art methods.
+fusion images from all methods in a unified training setup,
+with M 3FD as the dataset for both training and testing.
+Due to the presence of a large number of continuously
+captured images in M 3FD, a simple random sampling method
+for dividing the dataset can easily lead to overfitting. In this
+study, we randomly selected 100 sets of 10 consecutive images
+as the test set, where the scenes are almost non-existent in the
+training set, to validate the robustness of the fusion method.
+1) Qualitative Comparisons: As shown in Figure 11 shows
+the detection precision of different fusion methods in a chal-
+lenging small-target scenario. Two main factors affect detec-
+tion: the scene suffers from degradation (fog, rain, strong light)
+and weak textures make pedestrians on the bridge difficult to
+detect. Methods like DDFM, LRRNet and ReCoNet produce
+low-contrast fused images, failing to highlight infrared targets,
+while methods like DDcGAN and IRFS generate artifacts that
+lead to incorrect detection. However, TarDAL and PAIFusion
+effectively detect all pedestrians. This highlights the impor-
+tance of complementary information (e.g., thermal targets) and
+handling degradation for improved detection performance.
+2) Quantitative Comparisons: We present the detection
+results in Table V, with AP@0.5 for different classes and
+overall precision, recall, mAP@0.5, and mAP@0.5:0.95. Two
+key observations emerge: First, TarDAL, a detection-oriented
+fusion method, delivers the highest precision by preserving
+thermal target details and textural information, excelling in
+detecting cars and persons. Second, perception-guided meth-
+ods like SegMiF and TIMFusion show strong performance
+through semantic feature interjection and task loss guidance,
+while U2Fusion and SDNet balance information preservation
+across modalities.
+D. Image Fusion for Semantic Segmentation
+We uniformly use the advanced SegFormer [192] as the base
+segmenter to measure the performance of various advanced
+fusion methods, with all methods trained on the corresponding
+fused images under consistent settings. The official division of
+training and testing sets in FMB is applied.
+1) Qualitative Comparisons: Figure 12 presents a qualita-
+tive comparison of a typical night-time urban scene. In this
+scenario, a pedestrian located in a dark area is challenging
+for most methods to segment accurately due to the low
+visibility. Meanwhile, the bus emits such strong light that it
+TABLE V
+QUANTITATIVE RESULTS OF OBJECT DETECTION ON THE M3FD DATASET.
+Methods Lamp Car Bus Motor Truck People mAP
+BDLFusion [126] 0.340 0.809 0.695 0.358 0.392 0.666 0.544
+CAF [127] 0.391 0.827 0.702 0.367 0.460 0.713 0.577
+CDDFuse [103] 0.427 0.821 0.704 0.329 0.453 0.665 0.566
+CoCoNet [167] 0.360 0.827 0.719 0.308 0.468 0.708 0.469
+DDcGAN [72] 0.407 0.801 0.666 0.300 0.392 0.603 0.528
+DDFM [168] 0.462 0.831 0.712 0.339 0.469 0.686 0.583
+DenseFuse [19] 0.464 0.820 0.710 0.310 0.483 0.668 0.576
+DetFusion [107] 0.419 0.830 0.700 0.403 0.447 0.679 0.580
+DIDFuse [23] 0.406 0.813 0.713 0.311 0.444 0.681 0.561
+EMMA [170] 0.462 0.827 0.647 0.392 0.473 0.682 0.581
+FusionGAN [65] 0.399 0.708 0.708 0.301 0.486 0.693 0.569
+FILM [169] 0.439 0.821 0.691 0.354 0.492 0.674 0.578
+IGNet [51] 0.360 0.827 0.719 0.308 0.468 0.708 0.565
+IRFS [144] 0.370 0.822 0.687 0.278 0.444 0.615 0.536
+LRRNet [36] 0.461 0.828 0.696 0.331 0.454 0.664 0.572
+MFEIF [22] 0.403 0.810 0.741 0.296 0.467 0.563 0.563
+MoEFusion [108] 0.469 0.837 0.690 0.333 0.469 0.676 0.579
+MRFS [117] 0.420 0.812 0.688 0.424 0.471 0.655 0.578
+MURF [155] 0.416 0.788 0.698 0.239 0.425 0.643 0.535
+PAIFusion [161] 0.327 0.811 0.722 0.219 0.440 0.728 0.541
+PromptF [105] 0.414 0.818 0.638 0.378 0.454 0.656 0.560
+PSFusion [115] 0.415 0.828 0.688 0.334 0.464 0.691 0.570
+ReCoNet [156] 0.409 0.797 0.689 0.299 0.477 0.644 0.552
+RFN-Nest [21] 0.497 0.830 0.702 0.385 0.438 0.671 0.587
+SDNet [163] 0.377 0.846 0.743 0.356 0.485 0.715 0.587
+SeAFusion [113] 0.398 0.826 0.719 0.340 0.471 0.694 0.575
+SegMiF [116] 0.468 0.831 0.727 0.365 0.438 0.684 0.585
+SHIP [180] 0.427 0.832 0.666 0.419 0.480 0.687 0.585
+SuperFusion [114] 0.393 0.823 0.706 0.336 0.473 0.696 0.571
+SwinFusion [95] 0.409 0.826 0.717 0.308 0.516 0.686 0.577
+TarDAL [79] 0.451 0.824 0.740 0.369 0.477 0.727 0.598
+Text-IF [102] 0.398 0.814 0.681 0.394 0.453 0.654 0.566
+TGFuse [158] 0.242 0.787 0.541 0.209 0.412 0.611 0.467
+TIMFusion [56] 0.431 0.823 0.699 0.479 0.453 0.622 0.584
+U2Fusion [162] 0.433 0.835 0.710 0.348 0.461 0.704 0.582
+UMFusion [153] 0.411 0.830 0.713 0.281 0.457 0.717 0.568
+YDTR [97] 0.338 0.820 0.682 0.263 0.415 0.604 0.520
+causes overexposure in the scene, leading many methods to
+misclassify the bus as a car and fail to capture its full outline.
+These challenges highlight the ongoing difficulty of handling
+scenes with extreme lighting conditions.
+2) Quantitative Comparisons: In Table VI, we report the
+numerical results for the segmentation task. Similar to the
+trend observed in detection tasks, perception-guided fusion
+methods (e.g., MoEFusion and DetFusion) demonstrate com-
+petitive segmentation performance due to their task-specific
+loss incorporation or learning strategies.
+E. Computational Complexity Analysis
+In this part, we select three key metrics for comparing com-
+putational efficiency: average runtime, the number of network
+model parameters, and FLOPS (floating-point operations per
+
+===== PAGE 14 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 14
+BDLFusion
+DIDFuse
+MRFS
+SegMiF
+CAF
+FILM
+MURF
+TarDAL
+CDDFuse
+IGNet
+PromptF
+TGFuse
+CoCoNet
+LRRNet
+PSFusion
+TIMFusion
+DDFM
+MetaFusion
+ReCoNet
+U2Fusion
+DenseFuse
+MFEIF
+RFN-Nest
+UMFusion
+DetFusion
+MoEFusion
+SeAFusion
+YDTR
+Infrared
+Visible
+Background Person Motorcycle Road Car Pole Vegetation Sky Truck Building Lamp Sign Bus Sidewalk Bicycle
+Fig. 12. Semantic segmentation results based on image fusion compared with several state-of-the-art methods.
+TABLE VI
+QUANTITATIVE SEMANTIC SEGMENTATION RESULTS OF DIFFERENT METHODS ON THE FMB DATASET.
+Methods Person Car Road Sidewalk Building Sign Bus Motocycle mAcc mIoUAcc IoU Acc IoU Acc IoU Acc IoU Acc IoU Acc IoU Acc IoU Acc IoU
+BDLFusion [126] 76,6 64.7 93.4 81.1 96.0 88.6 57.6 48.8 92.0 83.7 84.8 69.4 68.7 63.5 39.5 24.6 64.2 56.0
+CAF [127] 76.8 64.7 93.3 81.0 96.1 88.6 56.3 48.5 91.3 83.3 85.9 71.2 59.4 53.8 38.5 26.2 63.2 55.5
+CDDFuse [103] 76.4 63.4 93.9 81.6 96.0 88.0 54.5 45.7 90.8 81.8 84.6 70.9 61.0 56.6 48.4 26.1 64.3 55.4
+CoCoNet [167] 72.5 60.5 94.3 81.7 95.9 88.4 53.0 46.0 92.0 83.1 84.2 70.4 67.3 63.2 42.7 26.7 64.2 56.4
+DATFuse [100] 74.8 62.7 93.5 80.2 95.9 87.7 51.1 43.8 90.8 81.7 83.8 68.8 57.4 52.9 37.9 21.7 61.9 53.9
+DDcGAN [72] 74.9 61.8 93.1 80.8 95.7 87.5 50.8 41.7 90.9 81.9 83.1 70.7 59.6 57.2 33.5 26.9 62.2 54.9
+DDFM [168] 74.1 63.3 93.5 81.6 96.4 89.1 54.9 48.3 92.4 84.0 85.5 71.7 68.1 63.3 48.0 25.7 64.9 56.6
+DeFusion [179] 76.7 63.3 93.4 81.2 96.4 87.5 51.1 44.6 90.7 82.3 85.3 70.7 71.5 66.0 50.4 27.5 64.5 55.9
+DenseFuse [19] 75.3 63.6 93.4 81.8 96.5 88.6 52.2 45.6 92.1 83.7 85.9 71.3 71.8 67.0 45.0 24.0 64.8 56.5
+DetFusion [107] 76.3 64.4 93.6 81.1 95.8 88.7 58.6 49.2 91.7 83.4 84.3 70.2 60.4 56.8 41.1 27.0 64.6 56.5
+DIDFuse [23] 75.4 64.0 93.8 79.6 95.7 88.9 59.9 46.5 91.2 82.4 84.6 70.3 51.2 48.2 43.1 25.2 62.3 54.0
+EMMA [170] 75.9 63.1 93.8 81.0 95.9 88.3 49.4 42.9 91.5 82.8 84.7 71.1 66.8 62.9 46.8 27.0 64.2 56.0
+FusionDN [166] 75.6 63.2 94.1 81.3 95.9 88.6 55.3 47.9 91.9 83.3 85.6 71.2 66.5 61.3 45.2 26.3 63.7 55.7
+FusionGAN [65] 77.9 64.7 93.1 79.1 95.5 87.5 54.7 46.6 91.4 82.3 85.6 72.4 42.9 39.2 35.0 23.3 62.0 54.3
+GANMcC [66] 73.8 63.7 92.9 80.9 96.0 88.1 57.8 49.2 91.5 82.3 84.4 70.4 53.8 50.2 46.7 28.9 63.4 55.3
+FILM [169] 75.9 64.4 93.7 80.4 96.1 88.7 51.9 44.5 91.9 83.3 84.3 71.8 62.4 58.1 43.8 23.8 63.6 55.5
+IGNet [51] 74.1 63.3 93.7 81.0 95.9 89.0 59.0 50.1 92.0 83.5 86.2 70.7 69.2 62.2 46.0 22.4 63.8 55.3
+IRFS [144] 74.2 62.2 93.6 81.2 96.0 88.8 56.3 44.4 91.0 82.5 85.8 72.0 68.8 63.8 47.1 25.5 64.8 56.1
+LRRNet [36] 74.9 63.6 93.7 81.6 96.1 88.9 55.2 47.0 91.8 82.6 85.6 71.1 68.4 64.3 46.0 27.5 64.5 56.4
+MetaFusion [106] 75.8 63.4 93.9 81.3 96.0 88.8 54.9 45.0 90.8 82.4 85.8 71.0 63.5 59.6 44.8 27.0 63.7 55.7
+MFEIF [22] 75.8 64.4 93.5 81.2 96.2 88.6 55.5 47.5 92.0 83.1 86.3 70.4 67.6 62.7 48.1 26.3 64.7 56.1
+MoEFusion [108] 75.2 63.8 93.5 81.9 96.1 88.7 55.8 46.7 94.2 83.1 85.4 72.2 70.8 66.4 40.1 30.7 64.5 57.0
+MRFS [117] 76.2 63.8 93.1 81.1 96.3 88.2 49.4 43.6 92.0 82.7 85.7 70.8 61.6 56.8 43.1 27.3 62.4 54.6
+MURF [155] 72.2 61.5 93.5 79.5 96.3 87.7 48.6 43.1 91.3 81.7 85.4 70.9 57.8 54.2 41.9 24.6 61.7 54.0
+PAIFusion [161] 75.8 64.7 93.6 81.4 96.4 88.8 55.5 47.9 92.0 83.3 87.1 71.9 65.6 59.8 45.4 24.4 64.2 55.9
+PMGI [165] 78.2 66.0 93.6 82.5 95.6 88.7 58.2 48.0 90.7 81.5 76.7 65.1 68.8 64.7 43.8 31.9 63.4 56.1
+PromptF [105] 77.2 63.8 93.6 80.7 96.2 88.2 52.7 45.8 91.2 82.2 84.0 70.4 59.3 55.5 46.2 27.9 63.5 55.4
+PSFusion [115] 76.6 64.2 93.5 80.7 96.0 88.2 52.5 45.5 91.6 83.0 83.9 72.0 52.1 49.1 49.0 29.2 63.8 55.7
+ReCoNet [156] 74.3 62.3 93.8 81.2 95.7 88.8 57.8 48.9 91.6 82.6 85.5 71.6 68.9 64.0 46.4 27.7 64.5 56.4
+RFN-Nest [21] 76.2 63.2 93.2 80.8 96.2 88.5 54.5 46.0 92.2 83.6 86.6 72.4 60.8 56.7 48.6 26.3 64.7 56.0
+SDNet [163] 75.6 64.3 93.5 81.5 96.2 88.3 54.8 47.6 92.2 83.2 85.7 71.6 63.9 58.6 43.6 26.1 64.2 56.2
+SeAFusion [113] 76.8 64.7 93.8 81.1 96.2 88.4 55.1 46.9 91.7 82.6 83.5 70.5 69.1 63.9 44.9 23.9 63.1 55.0
+SegMiF [116] 75.3 64.2 93.4 80.9 95.9 88.4 54.5 47.6 91.6 82.8 85.1 71.0 59.5 55.4 45.2 28.7 64.0 56.0
+SHIP [180] 76.1 64.5 93.8 80.9 96.0 88.2 52.3 43.9 91.9 83.0 85.1 71.7 59.9 56.8 44.9 25.3 63.9 55.7
+SuperFusion [114] 77.3 64.0 93.6 80.6 96.1 87.7 53.2 44.5 91.0 82.6 84.9 71.3 67.0 61.7 41.7 26.3 64.0 55.9
+SwinFusion [95] 77.3 64.1 93.6 81.3 96.0 88.7 54.6 47.4 91.6 82.3 83.9 70.8 68.5 63.7 43.8 26.0 64.7 56.4
+TarDAL [79] 76.0 64.8 93.2 79.7 96.0 87.8 52.8 45.0 91.9 82.9 86.4 71.4 56.4 53.0 43.7 26.9 62.1 54.2
+Text-IF [102] 77.1 64.6 93.9 80.8 96.1 88.7 54.9 47.2 91.7 83.0 85.6 71.9 64.6 60.6 45.1 28.5 64.6 56.4
+TGFuse [158] 77.7 64.7 93.5 80.7 96.2 87.9 51.9 44.6 90.8 82.5 85.7 72.1 64.3 60.1 51.2 31.6 64.4 56.1
+TIMFusion [56] 71.9 62.1 92.9 81.3 95.5 88.0 53.4 45.5 90.6 81.4 82.0 69.9 59.0 55.5 41.7 25.5 62.7 55.0
+U2Fusion [162] 76.3 64.0 93.7 81.3 96.1 88.8 55.9 46.1 91.4 83.3 85.7 71.9 61.4 57.7 43.5 26.0 64.1 56.0
+UMFusion [153] 75.8 64.4 93.7 81.8 95.9 88.9 58.7 47.2 91.7 82.9 86.3 71.3 67.9 64.2 41.7 24.2 64.6 56.3
+YDTR [97] 74.3 63.4 93.7 81.7 95.9 88.9 58.7 49.1 91.9 83.2 85.3 70.6 64.6 60.2 44.2 28.0 64.5 56.5
+second). Average runtime focuses on the time required for
+an algorithm or model to complete a specific task, serving
+as an intuitive measure of speed and efficiency. FLOPS, on
+the other hand, is a measure of the computational volume of
+a model, indicating the number of floating-point operations
+during forward propagation. The parameters, which includes
+the total count of weights and biases, reflects the size and
+complexity of the model. Models with more parameters may
+exhibit stronger learning capabilities but could also lead to
+higher computational and storage costs. Generally, the param-
+eter count of a model tends to be proportional to its FLOPS,
+and an increase in FLOPS usually results in longer runtime.
+For our experiments, we tested random sets of 10 images
+from the M 3FD dataset, each with a resolution of 1024 ×768,
+on an Nvidia GeForce 4090. To eliminate the influence of the
+CPU, we utilized the official event function from CUDA to
+measure the runtime on the GPU, excluding the initial value
+to calculate the average. The final results in units of ms, M,
+and G are presented in Table VII. It is evident that there are
+significant differences in average runtime, FLOPS, and the
+number of parameters among various methods. For instance,
+Densefuse, an extremely simple and outdated method, man-
+
+===== PAGE 15 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 15
+TABLE VII
+QUANTITATIVE COMPARISON OF COMPUTATIONAL EFFICIENCY ON M3FD DATASET.
+Method Time (ms) FLOPS(G) Params(M) Method Time (ms) FLOPS(G) Params(M) Method Time (ms) FLOPS(G) Params(M)
+BDLFusion [126] 45.89 328.2 0.418 IGNet [51] 47.46 647.6 7.871 SeAFusion [113] 23.53 130.5 0.167
+CAF [127] 11.38 116.7 0.148 IRFS [144] 18.21 188.8 0.242 SegMiF [116] 681.5 500.4 0.621
+CDDFuse [103] 463.8 1402 1.186 LRRNet [36] 263.9 36.27 0.049 SHIP [180] 27.93 401.5 0.525
+CoCoNet [167] 29.06 498.5 9.114 MetaFusion [106] 85.40 637.9 0.812 SuperFusion [114] 177.0 196.3 1.962
+DATFuse [100] 33.06 14.22 0.011 MFEIF [22] 68.93 554.7 0.371 SwinFusion [95] 62.74 185.1 0.955
+DDFM [168] 280.8k 1336k 552.7 MoE-Fusion [108] 77.79 229.5 83.45 TarDAL [79] 16.57 233.3 0.297
+DeFusion [179] 62.04 196.8 7.874 MRFS [117] 98.90 356.0 135.0 Text-IF [102] 21.37 135.7 85.49
+DetFusion [107] 64.15 187.0 83.07 PAIFusion [161] 87.72 204.8 0.260 TGFuse [158] 41.17 318.9 137.3
+DIDFuse [23] 12.23 45.61 2.733 PSFusion [115] 79.66 463.6 45.90 TIMFusion [56] 17.39 100.7 0.158
+EMMA [170] 25.72 106.3 1.516 ReCoNet [156] 37.53 18.21 0.008 UMFusion [153] 41.21 494.6 0.629
+FILM [169] 183.3 230.4 0.490 RFN-Nest [21] 178.8 1346 7.524 YDTR [97] 143.3 247.0 0.107
+ages to achieve a very low runtime while maintaining a lower
+count of parameters and FLOPS. In contrast, DDFM, which
+utilizes a diffusion model, far exceeds other methods in terms
+of the number of parameters and FLOPS, and its runtime is
+as high as 280.8k ms. This may indicate that the efficiency of
+this method in practical applications is relatively low.
+VI. F UTURE TRENDS
+A. Handling of Misalignment/Attack Data
+Image registration is a key factor for fusion, ensuring that
+corresponding pixel points in different images are accurately
+aligned. In practical application, due to the different imag-
+ing principles (reflection and radiation) and spectral ranges,
+obtaining pair of images with aligned pixels is challenging.
+However, few efforts have been focus on this issues [114],
+[153], [155], [156], [160], [190], [191]. We anticipate that fu-
+ture endeavors should focus on designing fusion networks that
+are compatible with registration or incorporating registration
+as a component of the overall loss function, thereby leading
+to the creation of “robust” fusion network.
+The robustness of image fusion networks in complex ad-
+versarial scenarios, including both physical (involving dis-
+tortions and degradation) and digital attacks (such as pa-
+rameter perturbations), represents a significant challenge. The
+core issue revolves around current methodologies that focus
+mainly on preserving source details without fully address-
+ing the correlation between fusion elements and perceptual
+robustness. Additionally, there is a noticeable deficiency in
+methods that enhance robustness against adversarial conditions
+without compromising overall performance, with prevalent
+issues like loss fluctuations and pattern failures highlighting
+the need for network and training optimization. To improve
+security, integrating visible and infrared sensors has become
+common to counteract single-modal physical attacks. While
+PAIFusion [161] has explored parameter perturbation in image
+fusion, effectively countering real-world physical and espe-
+cially cross-modality attacks [193], [194] remains a formidable
+task.
+B. Developing Benchmarks
+High-quality benchmarks are vital for the IVIF commu-
+nity’s development, initially highlighted by sets like TNO,
+RoadSenece, and VIFB, which had limited scene diversity
+and resolution. To advance perception tasks, datasets such
+as MS and LLVIP were developed, offering object detection
+labels but with a focus on specific scenes like roads and
+surveillance. Addressing broader challenges, M 3FD introduce
+with adverse weather conditions and varied scenarios. Recent
+datasets like MFNet and FMB cater to complex semantic
+tasks with extensive labels. While the former encompasses
+8 categories specific to driving scenes, the latter boasts 14
+categories spanning multiple environments.
+Although the aforementioned benchmarks have alleviated
+data scarcity in the IVIF domain, three pressing issues still
+warrant attention. i) The creation of infrared and visible image
+registration benchmarks is crucial, as existing benchmarks
+focus on pixel-aligned pairs. Developing benchmarks that
+accurately reflect real-world discrepancies with registration
+ground truth, considering factors like imaging differences and
+baselines, is essential for discipline progression. ii) Broadening
+IVIF benchmarks to include a variety of high-level tasks
+are key to advancing the field. While current benchmarks
+cover tasks like object detection and semantic segmentation,
+emerging needs call for the inclusion of tasks (such as depth
+estimation and scene parsing) to meet the evolving research
+directions and practical applications. iii) Exploring diverse
+challenging scenarios: Existing benchmarks predominantly
+focus on limited scenes, with the majority of data sourced from
+urban locales and academic settings. This encourages us to
+explore more demanding situations, such as tunnels and caves
+(for exploration), forest terrains (for military surveillance), and
+indoor spaces (for rescue missions), among others.
+C. Better Evaluation Metrics
+Evaluating the quality of fused images is a critical issue,
+especially in the absence of ground truth. Traditional metrics
+like EN, MI, CC, and SCD each measure only one aspect of
+image quality and may not align with subjective evaluations,
+particularly under conditions like high noise levels. As a result,
+these metrics alone cannot fully capture the essence of image
+fusion quality.
+While leveraging subsequent task performance, such as
+object detection or semantic segmentation, provides insights, it
+is difficult to comprehensively reflect visual quality. Therefore,
+developing evaluation metrics that account for both visual and
+perceptual quality is an essential research direction.
+D. Lightweight Design
+Operating efficiency is a pivotal factor for the practical
+application of IVIF. Current methodologies strive to achieve
+high-quality fused imagery by increasing neural network size,
+which significantly boosts the number of parameters and
+
+===== PAGE 16 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 16
+adversely affects operational efficiency. While some strategies
+have been proposed to mitigate these issues by integrating
+innovative technologies, such as Neural Architecture Search,
+Neural Network Pruning (NNP), and Atrous Convolution
+(AC), their effectiveness is still heavily dependent on the
+computational power of advanced GPUs.
+In light of these challenges, future research should place
+greater emphasis on the pursuit of lightweight network de-
+sign. This involves addressing two critical issues: firstly, the
+construction of lightweight networks is imperative since most
+existing devices (e.g., unmanned aerial vehicles (UA Vs) and
+handheld devices) are unable to support the computational
+demands of heavy GPUs. This necessitates the exploration of
+more efficient and less resource-intensive network architec-
+tures. Moreover, the development of hardware-friendly fusion
+methods is essential, as they present a more economical and
+practical solution compared to heavy image computing units.
+The preponderance of extant methods, which have been devel-
+oped on server-based platforms utilizing frameworks such as
+PyTorch and TensorFlow, are not easily transferable to actual
+devices/products. Therefore, ensuring that new methods are
+adaptable to actual hardware constraints is vital for real-world
+application and integration.
+E. Combination with Various Tasks
+IVIF as a basic image enhancement technology, undoubt-
+edly can boost/assist/combine with other vision tasks. i) Ad-
+vanced Scene Analysis: in autonomous vehicle navigation,
+combining these two types of images can provide a more
+comprehensive understanding of the environment, aiding in
+better decision-making and obstacle avoidance in varied light-
+ing and weather conditions. ii) Depth Estimation and 3D
+Reconstruction: IVIF can also enhance depth estimation and
+3D reconstruction tasks. With combination of infrared/visible
+complementary depth information, it can lead to more accurate
+3D models of environments. This has potential applications
+in virtual reality, augmented reality, and urban planning. As
+computational technologies continue to evolve, the potential
+of IVIF in transforming various fields is immense, promising
+to unlock new capabilities and applications in the near future.
+VII. C ONCLUSIONS
+In the realm of infrared and visible image fusion, there
+have been notable advancements. However, uncertainties re-
+main regarding technology alignment with various data types,
+practical applications, and evaluation standards. In this survey,
+we clarify these aspects from methodological and practical
+perspectives, and include a detailed comparative analysis of
+registration, fusion, and related tasks. The goal of this survey
+is to provide guidance for both beginners and seasoned pro-
+fessionals in this evolving domain, encouraging the continued
+development and application of these technologies. We also
+spotlight areas ripe for future research, with the hope of
+inspiring ongoing innovation in this dynamic field.
+REFERENCES
+[1] D. Marpaung, J. Yao, and J. Capmany, “Integrated microwave photon-
+ics,” Nature photonics, vol. 13, no. 2, pp. 80–90, 2019.
+[2] C. J. Simon, D. E. Dupuy, and W. W. Mayo-Smith, “Microwave
+ablation: principles and applications,” Radiographics, vol. 25, no. 1,
+pp. S69–S83, 2005.
+[3] G. Simone, A. Farina, F. C. Morabito, S. B. Serpico, and L. Bruzzone,
+“Image fusion techniques for remote sensing applications,” InfFus,
+vol. 3, no. 1, pp. 3–15, 2002.
+[4] N. Yokoya, C. Grohnfeldt, and J. Chanussot, “Hyperspectral and mul-
+tispectral data fusion: A comparative review of the recent literature,”
+IEEE GRSM, vol. 5, no. 2, pp. 29–56, 2017.
+[5] T.-Y . Lin, M. Maire, S. Belongie, J. Hays, P. Perona, D. Ramanan,
+P. Doll ´ar, and C. L. Zitnick, “Microsoft coco: Common objects in
+context,” in Computer Vision–ECCV 2014: 13th European Conference,
+Zurich, Switzerland, September 6-12, 2014, Proceedings, Part V 13 .
+Springer, 2014, pp. 740–755.
+[6] M. Li, D. Kong, and X. Zhang, “Simulation and experimental verifica-
+tion of infrared-based heat flux sensor,” in icOPEN, vol. 12550. SPIE,
+2023, pp. 96–101.
+[7] Y . Liu, S. Liu, and Z. Wang, “A general framework for image fusion
+based on multi-scale transform and sparse representation,” InfFus,
+vol. 24, pp. 147–164, 2015.
+[8] J. Ma, Y . Ma, and C. Li, “Infrared and visible image fusion methods
+and applications: A survey,” InfFus, vol. 45, pp. 153–178, 2019.
+[9] X. Zhang and Y . Demiris, “Visible and infrared image fusion using
+deep learning,” IEEE TPAMI, 2023.
+[10] A. Raza, H. Huo, and T. Fang, “Pfaf-net: Pyramid feature network
+for multimodal fusion,” IEEE Sensors Letters , vol. 4, no. 12, pp. 1–4,
+2020.
+[11] Y . Fu and X.-J. Wu, “A dual-branch network for infrared and visible
+image fusion,” in ICPR. IEEE, 2021, pp. 10 675–10 680.
+[12] L. Jian, X. Yang, Z. Liu, G. Jeon, M. Gao, and D. Chisholm, “Sedrfuse:
+A symmetric encoder–decoder with residual block network for infrared
+and visible image fusion,” IEEE TIM, vol. 70, pp. 1–15, 2020.
+[13] Z. Wang, Y . Wu, J. Wang, J. Xu, and W. Shao, “Res2fusion: Infrared
+and visible image fusion based on dense res2net and double nonlocal
+attention models,” IEEE TIM, vol. 71, pp. 1–12, 2022.
+[14] H. Xu, H. Zhang, and J. Ma, “Classification saliency-based rule for
+visible and infrared image fusion,” IEEE TCI , vol. 7, pp. 824–836,
+2021.
+[15] J. Zhu, Q. Dou, L. Jian, K. Liu, F. Hussain, and X. Yang, “Multiscale
+channel attention network for infrared and visible image fusion,”
+CONCURR COMP-PRACT E , vol. 33, no. 22, p. e6155, 2021.
+[16] Y . Fu, X.-J. Wu, and J. Kittler, “Effective method for fusing infrared
+and visible images,” J ELECTRON IMAGING , vol. 30, no. 3, pp.
+033 013–033 013, 2021.
+[17] Y . Pan, D. Pi, I. A. Khan, Z. U. Khan, J. Chen, and H. Meng,
+“Densenetfuse: A study of deep unsupervised densenet to infrared and
+visual image fusion,” J AMB INTEL HUM COMP , pp. 1–13, 2021.
+[18] F. Zhao, W. Zhao, L. Yao, and Y . Liu, “Self-supervised feature adaption
+for infrared and visible image fusion,” InfFus, vol. 76, pp. 189–203,
+2021.
+[19] H. Li and X.-J. Wu, “Densefuse: A fusion approach to infrared and
+visible images,” IEEE TIP, vol. 28, no. 5, pp. 2614–2623, 2018.
+[20] H. Li, X.-J. Wu, and T. Durrani, “Nestfuse: An infrared and visible
+image fusion architecture based on nest connection and spatial/channel
+attention models,” IEEE TIM, vol. 69, no. 12, pp. 9645–9656, 2020.
+[21] H. Li, X.-J. Wu, and J. Kittler, “Rfn-nest: An end-to-end residual fusion
+network for infrared and visible images,” InfFus, vol. 73, pp. 72–86,
+2021.
+[22] J. Liu, X. Fan, J. Jiang, R. Liu, and Z. Luo, “Learning a deep
+multi-scale feature ensemble and an edge-attention guidance for image
+fusion,” IEEE TCSVT, vol. 32, no. 1, pp. 105–119, 2021.
+[23] Z. Zhao, S. Xu, C. Zhang, J. Liu, P. Li, and J. Zhang, “Didfuse: Deep
+image decomposition for infrared and visible image fusion,” in IJCAI,
+2020.
+[24] Z. Zhao, S. Xu, J. Zhang, C. Liang, C. Zhang, and J. Liu, “Efficient and
+model-based infrared and visible image fusion via algorithm unrolling,”
+IEEE TCSVT, vol. 32, no. 3, pp. 1186–1196, 2021.
+[25] Y . Liu, X. Chen, J. Cheng, H. Peng, and Z. Wang, “Infrared and visible
+image fusion with convolutional neural networks,” IJWMIP, vol. 16,
+no. 03, p. 1850018, 2018.
+[26] Y . Liu, L. Dong, Y . Ji, and W. Xu, “Infrared and visible image fusion
+through details preservation,” Sensors, vol. 19, no. 20, p. 4556, 2019.
+[27] R. Hou, D. Zhou, R. Nie, D. Liu, L. Xiong, Y . Guo, and C. Yu, “Vif-
+net: An unsupervised framework for infrared and visible image fusion,”
+IEEE TCI, vol. 6, pp. 640–651, 2020.
+
+===== PAGE 17 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 17
+[28] H. T. Mustafa, J. Yang, H. Mustafa, and M. Zareapoor, “Infrared and
+visible image fusion based on dilated residual attention network,”Optik,
+vol. 224, p. 165409, 2020.
+[29] J. Li, H. Huo, K. Liu, C. Li, S. Li, and X. Yang, “Infrared and
+visible image fusion via multi-discriminators wasserstein generative
+adversarial network,” in ICMLA. IEEE, 2019, pp. 2014–2019.
+[30] Q. Li, G. Han, P. Liu, H. Yang, D. Chen, X. Sun, J. Wu, and D. Liu, “A
+multilevel hybrid transmission network for infrared and visible image
+fusion,” IEEE TIM, vol. 71, pp. 1–14, 2022.
+[31] W.-B. An and H.-M. Wang, “Infrared and visible image fusion with
+supervised convolutional neural network,” Optik, vol. 219, p. 165120,
+2020.
+[32] Y . Zhang, L. Zhang, X. Bai, and L. Zhang, “Infrared and visual
+image fusion through infrared feature extraction and visual information
+preservation,” INFRARED PHYS TECHN , vol. 83, pp. 227–237, 2017.
+[33] Y . Feng, H. Lu, J. Bai, L. Cao, and H. Yin, “Fully convolutional
+network-based infrared and visible image fusion,” MULTIMED TOOLS
+APPL, vol. 79, no. 21-22, pp. 15 001–15 014, 2020.
+[34] M. Wang, X. Liu, and H. Jin, “A generative image fusion approach
+based on supervised deep convolution network driven by weighted
+gradient flow,” IVC, vol. 86, pp. 1–16, 2019.
+[35] D. Zhu, W. Zhan, Y . Jiang, X. Xu, and R. Guo, “Iplf: A novel image
+pair learning fusion network for infrared and visible image,” IEEE
+SENS J, vol. 22, no. 9, pp. 8808–8817, 2022.
+[36] H. Li, T. Xu, X.-J. Wu, J. Lu, and J. Kittler, “Lrrnet: A novel
+representation learning guided fusion network for infrared and visible
+images,” IEEE TPAMI, 2023.
+[37] R. Liu, J. Liu, Z. Jiang, X. Fan, and Z. Luo, “A bilevel integrated model
+with data-driven layer ensemble for multi-modality image fusion,”
+IEEE TIP, vol. 30, pp. 1261–1274, 2020.
+[38] L. Tang, J. Yuan, H. Zhang, X. Jiang, and J. Ma, “Piafusion: A progres-
+sive infrared and visible image fusion network based on illumination
+aware,” InfFus, vol. 83-84, pp. 79–92, 2022.
+[39] J. Ma, L. Tang, M. Xu, H. Zhang, and G. Xiao, “Stdfusionnet: An
+infrared and visible image fusion network based on salient target
+detection,” IEEE TIM, vol. 70, pp. 1–13, 2021.
+[40] H. Li, Y . Cen, Y . Liu, X. Chen, and Z. Yu, “Different input resolutions
+and arbitrary output resolution: A meta learning-based deep framework
+for infrared and visible image fusion,” IEEE TIP , vol. 30, pp. 4070–
+4083, 2021.
+[41] Y . Long, H. Jia, Y . Zhong, Y . Jiang, and Y . Jia, “Rxdnfuse: A
+aggregated residual dense network for infrared and visible image
+fusion,” InfFus, vol. 69, pp. 128–141, 2021.
+[42] H. Xu, X. Wang, and J. Ma, “Drf: Disentangled representation for
+visible and infrared image fusion,” IEEE TIM, vol. 70, pp. 1–13, 2021.
+[43] D. Xu, N. Zhang, Y . Zhang, Z. Li, Z. Zhao, and Y . Wang, “Multi-scale
+unsupervised network for infrared and visible image fusion based on
+joint attention mechanism,” INFRARED PHYS TECHN , vol. 125, p.
+104242, 2022.
+[44] Y . Li, J. Wang, Z. Miao, and J. Wang, “Unsupervised densely attention
+network for infrared and visible image fusion,” MULTIMED TOOLS
+APPL, vol. 79, no. 45-46, pp. 34 685–34 696, 2020.
+[45] Z. Wang, J. Wang, Y . Wu, J. Xu, and X. Zhang, “Unfusion: A unified
+multi-scale densely connected network for infrared and visible image
+fusion,” IEEE TCSVT, vol. 32, no. 6, pp. 3360–3374, 2021.
+[46] K. Ren, D. Zhang, M. Wan, X. Miao, G. Gu, and Q. Chen, “An infrared
+and visible image fusion method based on improved densenet and
+mrmr-zca,” INFRARED PHYS TECHN , vol. 115, p. 103707, 2021.
+[47] A. Raza, J. Liu, Y . Liu, J. Liu, Z. Li, X. Chen, H. Huo, and T. Fang,
+“Ir-msdnet: Infrared and visible image fusion based on infrared features
+and multiscale dense network,” IEEE J-STARS, vol. 14, pp. 3426–3437,
+2021.
+[48] L. Liu, M. Chen, M. Xu, and X. Li, “Two-stream network for infrared
+and visible images fusion,” Neurocomputing, vol. 460, pp. 50–58, 2021.
+[49] H. Xu, M. Gong, X. Tian, J. Huang, and J. Ma, “Cufd: An encoder–
+decoder network for visible and infrared image fusion based on com-
+mon and unique feature decomposition,” CVIU, vol. 218, p. 103407,
+2022.
+[50] Z. Yang and S. Zeng, “Tpfusion: Texture preserving fusion of infrared
+and visible images via dense networks,” Entropy, vol. 24, no. 2, p. 294,
+2022.
+[51] J. Li, J. Chen, J. Liu, and H. Ma, “Learning a graph neural network
+with cross modality interaction for image fusion,” in ACMMM, 2023,
+pp. 4471–4479.
+[52] J. Yue, L. Fang, S. Xia, Y . Deng, and J. Ma, “Dif-fusion: Towards
+high color fidelity in infrared and visible image fusion with diffusion
+models,” IEEE TIP, 2023.
+[53] J. Liu, Y . Wu, Z. Huang, R. Liu, and X. Fan, “Smoa: Searching a
+modality-oriented architecture for infrared and visible image fusion,”
+IEEE SPL, vol. 28, pp. 1818–1822, 2021.
+[54] R. Liu, Z. Liu, J. Liu, and X. Fan, “Searching a hierarchically
+aggregated fusion architecture for fast multi-modality image fusion,”
+in ACMMM, 2021, pp. 1600–1608.
+[55] J. Liu, Y . Wu, G. Wu, R. Liu, and X. Fan, “Learn to search a lightweight
+architecture for target-aware infrared and visible image fusion,” IEEE
+SPL, vol. 29, pp. 1614–1618, 2022.
+[56] R. Liu, Z. Liu, J. Liu, X. Fan, and Z. Luo, “A task-guided, implicitly-
+searched and metainitialized deep model for image fusion,” IEEE
+TPAMI, 2024.
+[57] H. Liu, K. Simonyan, and Y . Yang, “Darts: Differentiable architecture
+search,” arXiv preprint arXiv:1806.09055 , 2018.
+[58] Y . Xu, L. Xie, X. Zhang, X. Chen, G.-J. Qi, Q. Tian, and H. Xiong,
+“Pc-darts: Partial channel connections for memory-efficient architecture
+search,” arXiv preprint arXiv:1907.05737 , 2019.
+[59] I. Goodfellow, J. Pouget-Abadie, M. Mirza, B. Xu, D. Warde-Farley,
+S. Ozair, A. Courville, and Y . Bengio, “Generative adversarial net-
+works,” Communications of the ACM , vol. 63, no. 11, pp. 139–144,
+2020.
+[60] J. Xu, X. Shi, S. Qin, K. Lu, H. Wang, and J. Ma, “Lbp-began:
+A generative adversarial network architecture for infrared and visible
+image fusion,” INFRARED PHYS TECHN , vol. 104, p. 103144, 2020.
+[61] D. Xu, Y . Wang, S. Xu, K. Zhu, N. Zhang, and X. Zhang, “Infrared
+and visible image fusion with a generative adversarial network and a
+residual network,” Applied Sciences, vol. 10, no. 2, p. 554, 2020.
+[62] J. Wang, Y . Li, and Z. Miao, “A new infrared and visible image
+fusion method based on generative adversarial networks and attention
+mechanism,” in ICIGP, 2021, pp. 109–119.
+[63] C. Yuan, C. Sun, X. Tang, and R. Liu, “Flgc-fusion gan: an enhanced
+fusion gan model by importing fully learnable group convolution,”
+MATH PROBL ENG, vol. 2020, pp. 1–13, 2020.
+[64] S. Bhagat, S. D. Joshi, B. Lall, and S. Gupta, “Multimodal sensor fusion
+using symmetric skip autoencoder via an adversarial regulariser,” IEEE
+J-STARS, vol. 14, pp. 1146–1157, 2020.
+[65] J. Ma, W. Yu, P. Liang, C. Li, and J. Jiang, “Fusiongan: A generative
+adversarial network for infrared and visible image fusion,” InfFus,
+vol. 48, pp. 11–26, 2019.
+[66] J. Ma, H. Zhang, Z. Shao, P. Liang, and H. Xu, “Ganmcc: A generative
+adversarial network with multiclassification constraints for infrared and
+visible image fusion,” IEEE TIM, vol. 70, pp. 1–14, 2020.
+[67] Q. Li, L. Lu, Z. Li, W. Wu, Z. Liu, G. Jeon, and X. Yang, “Coupled gan
+with relativistic discriminators for infrared and visible images fusion,”
+IEEE SENS J , vol. 21, no. 6, pp. 7458–7467, 2019.
+[68] M. Lebedev, D. Komarov, O. Vygolov, and Y . V . Vizilter, “Multisensor
+image fusion based on generative adversarial networks,” in ISPRS XXV,
+vol. 11155. SPIE, 2019, pp. 565–574.
+[69] Y . Gu, X. Wang, C. Zhang, and B. Li, “Advanced driving assistance
+based on the fusion of infrared and visible images,” Entropy, vol. 23,
+no. 2, p. 239, 2021.
+[70] J. Hou, D. Zhang, W. Wu, J. Ma, and H. Zhou, “A generative adversarial
+network for infrared and visible image fusion based on semantic
+segmentation,” Entropy, vol. 23, no. 3, p. 376, 2021.
+[71] H. Xu, P. Liang, W. Yu, J. Jiang, and J. Ma, “Learning a generative
+model for fusing infrared and visible images via conditional generative
+adversarial network with dual discriminators.” in IJCAI, 2019, pp.
+3954–3960.
+[72] J. Ma, H. Xu, J. Jiang, X. Mei, and X.-P. Zhang, “Ddcgan: A dual-
+discriminator conditional generative adversarial network for multi-
+resolution image fusion,” IEEE TIP, vol. 29, pp. 4980–4995, 2020.
+[73] J. Li, H. Huo, C. Li, R. Wang, and Q. Feng, “Attentionfgan: Infrared
+and visible image fusion using attention-based generative adversarial
+networks,” IEEE TMM, vol. 23, pp. 1383–1396, 2020.
+[74] H. Zhou, W. Wu, Y . Zhang, J. Ma, and H. Ling, “Semantic-supervised
+infrared and visible image fusion via a dual-discriminator generative
+adversarial network,” IEEE TMM, 2021.
+[75] H. Zhang, J. Yuan, X. Tian, and J. Ma, “Gan-fm: Infrared and visible
+image fusion using gan with full-scale skip connection and dual
+markovian discriminators,” IEEE TCI, vol. 7, pp. 1134–1147, 2021.
+[76] Y . Gao, S. Ma, and J. Liu, “Dcdr-gan: A densely connected disen-
+tangled representation generative adversarial network for infrared and
+visible image fusion,” IEEE TCSVT, vol. 33, no. 2, pp. 549–561, 2022.
+[77] Y . Rao, D. Wu, M. Han, T. Wang, Y . Yang, T. Lei, C. Zhou, H. Bai,
+and L. Xing, “At-gan: A generative adversarial network with attention
+and transition for infrared and visible image fusion,” InfFus, vol. 92,
+pp. 336–349, 2023.
+
+===== PAGE 18 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 18
+[78] Z. Le, J. Huang, H. Xu, F. Fan, Y . Ma, X. Mei, and J. Ma, “Uifgan:
+An unsupervised continual-learning generative adversarial network for
+unified image fusion,” InfFus, vol. 88, pp. 305–318, 2022.
+[79] J. Liu, X. Fan, Z. Huang, G. Wu, R. Liu, W. Zhong, and Z. Luo,
+“Target-aware dual adversarial learning and a multi-scenario multi-
+modality benchmark to fuse infrared and visible for object detection,”
+in CVPR, 2022, pp. 5802–5811.
+[80] J. Li, H. Huo, K. Liu, and C. Li, “Infrared and visible image
+fusion using dual discriminators generative adversarial networks with
+wasserstein distance,” Information Sciences, vol. 529, pp. 28–41, 2020.
+[81] J. Li, H. Huo, C. Li, R. Wang, C. Sui, and Z. Liu, “Multigrained
+attention network for infrared and visible image fusion,” IEEE TIM ,
+vol. 70, pp. 1–12, 2020.
+[82] A. Song, H. Duan, H. Pei, and L. Ding, “Triple-discriminator generative
+adversarial network for infrared and visible image fusion,” Neurocom-
+puting, vol. 483, pp. 183–194, 2022.
+[83] Y . Zhao, G. Fu, H. Wang, and S. Zhang, “The fusion of unmatched
+infrared and visible images based on generative adversarial networks,”
+MATH PROBL ENG, vol. 2020, pp. 1–12, 2020.
+[84] J. Ma, P. Liang, W. Yu, C. Chen, X. Guo, J. Wu, and J. Jiang, “Infrared
+and visible image fusion via detail preserving adversarial learning,”
+InfFus, vol. 54, pp. 85–98, 2020.
+[85] Y . Fu, X.-J. Wu, and T. Durrani, “Image fusion based on generative
+adversarial network consistent with perception,” InfFus, vol. 72, pp.
+110–125, 2021.
+[86] Z. Wang, W. Shao, Y . Chen, J. Xu, and X. Zhang, “Infrared and
+visible image fusion via interactive compensatory attention adversarial
+learning,” IEEE TMM, vol. 25, pp. 7800–7813, 2022.
+[87] Z. Wang, Z. Zhang, W. Qi, F. Yang, and J. Xu, “Freqgan: Infrared and
+visible image fusion via unified frequency adversarial learning,” IEEE
+TCSVT, 2024.
+[88] H. Zhao and R. Nie, “Dndt: Infrared and visible image fusion via
+densenet and dual-transformer,” in ICITBE. IEEE, 2021, pp. 71–75.
+[89] J. Li, J. Zhu, C. Li, X. Chen, and B. Yang, “Cgtf: Convolution-guided
+transformer for infrared and visible image fusion,” IEEE TIM, vol. 71,
+pp. 1–14, 2022.
+[90] X. Liu, H. Gao, Q. Miao, Y . Xi, Y . Ai, and D. Gao, “Mfst: Multi-
+modal feature self-adaptive transformer for infrared and visible image
+fusion,” Remote Sensing, vol. 14, no. 13, p. 3233, 2022.
+[91] X. Yang, H. Huo, R. Wang, C. Li, X. Liu, and J. Li, “Dglt-fusion: A
+decoupled global–local infrared and visible image fusion transformer,”
+INFRARED PHYS TECHN , vol. 128, p. 104522, 2023.
+[92] L. Qu, S. Liu, M. Wang, S. Li, S. Yin, Q. Qiao, and Z. Song,
+“Transfuse: A unified transformer-based image fusion framework using
+self-supervised learning,” arXiv preprint arXiv:2201.07451 , 2022.
+[93] W. Tang, F. He, Y . Liu, and Y . Duan, “Matr: Multimodal medical image
+fusion via multiscale adaptive transformer,” IEEE TIP , vol. 31, pp.
+5134–5149, 2022.
+[94] V . Vs, J. M. J. Valanarasu, P. Oza, and V . M. Patel, “Image fusion
+transformer,” in ICIP. IEEE, 2022, pp. 3566–3570.
+[95] J. Ma, L. Tang, F. Fan, J. Huang, X. Mei, and Y . Ma, “Swinfusion:
+Cross-domain long-range learning for general image fusion via swin
+transformer,” IEEE/CAA JAS, vol. 9, no. 7, pp. 1200–1217, 2022.
+[96] Z. Liu, Y . Lin, Y . Cao, H. Hu, Y . Wei, Z. Zhang, S. Lin, and
+B. Guo, “Swin transformer: Hierarchical vision transformer using
+shifted windows,” in ICCV, 2021, pp. 10 012–10 022.
+[97] W. Tang, F. He, and Y . Liu, “Ydtr: Infrared and visible image fusion
+via y-shape dynamic transformer,” IEEE TMM, 2022.
+[98] H. Yin, A. Vahdat, J. M. Alvarez, A. Mallya, J. Kautz, and
+P. Molchanov, “A-vit: Adaptive tokens for efficient vision transformer,”
+in CVPR, 2022, pp. 10 809–10 818.
+[99] W. Tang, F. He, and Y . Liu, “Tccfusion: An infrared and visible image
+fusion method based on transformer and cross correlation,” Pattern
+Recognition, vol. 137, p. 109295, 2023.
+[100] W. Tang, F. He, Y . Liu, Y . Duan, and T. Si, “Datfuse: Infrared and
+visible image fusion via dual attention transformer,” IEEE TCSVT ,
+2023.
+[101] S. Park, A. G. Vien, and C. Lee, “Cross-modal transformers for infrared
+and visible image fusion,” IEEE TCSVT, vol. 34, no. 2, pp. 770–785,
+2023.
+[102] X. Yi, H. Xu, H. Zhang, L. Tang, and J. Ma, “Text-if: Leveraging
+semantic text guidance for degradation-aware and interactive image
+fusion,” in CVPR, 2024, pp. 27 026–27 035.
+[103] Z. Zhao, H. Bai, J. Zhang, Y . Zhang, S. Xu, Z. Lin, R. Timofte,
+and L. Van Gool, “Cddfuse: Correlation-driven dual-branch feature
+decomposition for multi-modality image fusion,” in CVPR, 2023, pp.
+5906–5916.
+[104] S. W. Zamir, A. Arora, S. Khan, M. Hayat, F. S. Khan, and M.-
+H. Yang, “Restormer: Efficient transformer for high-resolution image
+restoration,” in CVPR, 2022, pp. 5728–5739.
+[105] L. Jinyuan, L. Xingyuan, W. Zirui, J. Zhiying, Z. Wei, F. Wei, and
+X. Bin, “Promptfusion: Harmonized semantic prompt learning for
+infrared and visible image fusion,” IEEE/CAA JAS , vol. 10, no. 11,
+pp. 2191–2205, 2024.
+[106] W. Zhao, S. Xie, F. Zhao, Y . He, and H. Lu, “Metafusion: Infrared
+and visible image fusion via meta-feature embedding from object
+detection,” in CVPR, 2023, pp. 13 955–13 965.
+[107] Y . Sun, B. Cao, P. Zhu, and Q. Hu, “Detfusion: A detection-driven
+infrared and visible image fusion network,” in ACMMM, 2022, pp.
+4003–4011.
+[108] B. Cao, Y . Sun, P. Zhu, and Q. Hu, “Multi-modal gated mixture of
+local-to-global experts for dynamic image fusion,” in ICCV, 2023, pp.
+23 555–23 564.
+[109] Y .-T. Chen, J. Shi, Z. Ye, C. Mertz, D. Ramanan, and S. Kong,
+“Multimodal object detection via probabilistic ensembling,” in ECCV.
+Springer, 2022, pp. 139–158.
+[110] H. Zhang, E. Fromont, S. Lefevre, and B. Avignon, “Multispectral
+fusion for object detection with cyclic fuse-and-refine blocks,” in ICIP.
+IEEE, 2020, pp. 276–280.
+[111] L. Zhang, X. Zhu, X. Chen, X. Yang, Z. Lei, and Z. Liu, “Weakly
+aligned cross-modal learning for multispectral pedestrian detection,” in
+ICCV, 2019, pp. 5127–5137.
+[112] L. Zhang, Z. Liu, S. Zhang, X. Yang, H. Qiao, K. Huang, and A. Hus-
+sain, “Cross-modality interactive attention network for multispectral
+pedestrian detection,” InfFus, vol. 50, pp. 20–29, 2019.
+[113] L. Tang, J. Yuan, and J. Ma, “Image fusion in the loop of high-level
+vision tasks: A semantic-aware real-time infrared and visible image
+fusion network,” InfFus, vol. 82, pp. 28–42, 2022.
+[114] L. Tang, Y . Deng, Y . Ma, J. Huang, and J. Ma, “Superfusion: A versatile
+image registration and fusion network with semantic awareness,”
+IEEE/CAA JAS, vol. 9, no. 12, pp. 2121–2137, 2022.
+[115] L. Tang, H. Zhang, H. Xu, and J. Ma, “Rethinking the necessity of
+image fusion in high-level vision tasks: A practical infrared and visible
+image fusion network based on progressive semantic injection and
+scene fidelity,” InfFus, p. 101870, 2023.
+[116] J. Liu, Z. Liu, G. Wu, L. Ma, R. Liu, W. Zhong, Z. Luo, and
+X. Fan, “Multi-interactive feature learning and a full-time multi-
+modality benchmark for image fusion and segmentation,” in ICCV,
+2023, pp. 8115–8124.
+[117] H. Zhang, X. Zuo, J. Jiang, C. Guo, and J. Ma, “Mrfs: Mutually
+reinforcing image fusion and segmentation,” in CVPR, 2024, pp.
+26 974–26 983.
+[118] Y . Sun, W. Zuo, and M. Liu, “Rtfnet: Rgb-thermal fusion network for
+semantic segmentation of urban scenes,” IEEE RAL, vol. 4, no. 3, pp.
+2576–2583, 2019.
+[119] J. Zhang, H. Liu, K. Yang, X. Hu, R. Liu, and R. Stiefelhagen, “Cmx:
+Cross-modal fusion for rgb-x semantic segmentation with transform-
+ers,” IEEE TITS, 2023.
+[120] Q. Zhang, S. Zhao, Y . Luo, D. Zhang, N. Huang, and J. Han, “Abm-
+drnet: Adaptive-weighted bi-directional modality difference reduction
+network for rgb-t semantic segmentation,” in CVPR, 2021, pp. 2633–
+2642.
+[121] S. Zhao, Y . Liu, Q. Jiao, Q. Zhang, and J. Han, “Mitigating modality
+discrepancies for rgb-t semantic segmentation,” IEEE TNNLS, 2023.
+[122] Q. Ha, K. Watanabe, T. Karasawa, Y . Ushiku, and T. Harada, “Mfnet:
+Towards real-time semantic segmentation for autonomous vehicles with
+multi-spectral scenes,” in IROS. IEEE, 2017, pp. 5108–5115.
+[123] W. Zhou, J. Liu, J. Lei, L. Yu, and J.-N. Hwang, “Gmnet: Graded-
+feature multilabel-learning network for rgb-thermal urban scene se-
+mantic segmentation,” IEEE TIP, vol. 30, pp. 7790–7802, 2021.
+[124] W. Zhou, S. Dong, C. Xu, and Y . Qian, “Edge-aware guidance fusion
+network for rgb–thermal scene parsing,” in AAAI, vol. 36, no. 3, 2022,
+pp. 3571–3579.
+[125] G. Li, Y . Wang, Z. Liu, X. Zhang, and D. Zeng, “Rgb-t semantic
+segmentation with location, activation, and sharpening,” IEEE TCSVT,
+vol. 33, no. 3, pp. 1223–1235, 2022.
+[126] Z. Liu, J. Liu, G. Wu, L. Ma, X. Fan, and R. Liu, “Bi-level dynamic
+learning for jointly multi-modality image fusion and beyond,” arXiv
+preprint arXiv:2305.06720, 2023.
+[127] J. Liu, G. Wu, Z. Liu, L. Ma, R. Liu, and X. Fan, “Where elegance
+meets precision: Towards a compact, automatic, and flexible framework
+for multi-modality image fusion and applications,” 2024.
+
+===== PAGE 19 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 19
+[128] N. Cvejic, S. G. Nikolov, H. D. Knowles, A. Loza, A. Achim, D. R.
+Bull, and C. N. Canagarajah, “The effect of pixel-level fusion on object
+tracking in multi-sensor surveillance video,” in CVPR. IEEE, 2007,
+pp. 1–7.
+[129] T. Zhang, X. Liu, Q. Zhang, and J. Han, “Siamcda: Complementarity-
+and distractor-aware rgb-t tracking based on siamese network,” IEEE
+TCSVT, vol. 32, no. 3, pp. 1403–1417, 2021.
+[130] C. Li, L. Liu, A. Lu, Q. Ji, and J. Tang, “Challenge-aware rgbt
+tracking,” in ECCV. Springer, 2020, pp. 222–237.
+[131] Y . Xiao, M. Yang, C. Li, L. Liu, and J. Tang, “Attribute-based
+progressive fusion network for rgbt tracking,” in AAAI, vol. 36, no. 3,
+2022, pp. 2831–2838.
+[132] Y . Zhu, C. Li, J. Tang, B. Luo, and L. Wang, “Rgbt tracking by trident
+fusion network,” IEEE TCSVT, vol. 32, no. 2, pp. 579–592, 2021.
+[133] L. Zhang, M. Danelljan, A. Gonzalez-Garcia, J. Van De Weijer, and
+F. Shahbaz Khan, “Multi-modal fusion for end-to-end rgb-t tracking,”
+in ICCV Workshops, 2019, pp. 0–0.
+[134] Z. Tang, T. Xu, and X.-J. Wu, “Temporal aggregation for adaptive rgbt
+tracking,” arXiv preprint arXiv:2201.08949 , 2022.
+[135] M. Feng, K. Song, Y . Wang, J. Liu, and Y . Yan, “Learning discrimina-
+tive update adaptive spatial-temporal regularized correlation filter for
+rgb-t tracking,” JVCI, vol. 72, p. 102881, 2020.
+[136] Z. Tang, T. Xu, H. Li, X.-J. Wu, X. Zhu, and J. Kittler, “Exploring
+fusion strategies for accurate rgbt visual object tracking,” InfFus, p.
+101881, 2023.
+[137] L. Liu, J. Chen, H. Wu, G. Li, C. Li, and L. Lin, “Cross-modal
+collaborative representation learning and a large-scale rgbt benchmark
+for crowd counting,” in CVPR, 2021, pp. 4823–4833.
+[138] H. Tang, Y . Wang, and L.-P. Chau, “Tafnet: A three-stream adaptive
+fusion network for rgb-t crowd counting,” in ISCAS. IEEE, 2022, pp.
+3299–3303.
+[139] W. Zhou, Y . Pan, J. Lei, L. Ye, and L. Yu, “Defnet: Dual-branch
+enhanced feature fusion network for rgb-t crowd counting,” IEEE TITS,
+vol. 23, no. 12, pp. 24 540–24 549, 2022.
+[140] W. Zhou, X. Yang, J. Lei, W. Yan, and L. Yu, “Mc3net: Multimodal-
+ity cross-guided compensation coordination network for rgb-t crowd
+counting,” IEEE TITS, 2023.
+[141] Z. Wu, L. Liu, Y . Zhang, M. Mao, L. Lin, and G. Li, “Multimodal
+crowd counting with mutual attention transformers,” in ICME. IEEE,
+2022, pp. 1–6.
+[142] Z. Liu, W. Wu, Y . Tan, and G. Zhang, “Rgb-t multi-modal crowd
+counting based on transformer,” arXiv preprint arXiv:2301.03033 ,
+2023.
+[143] X. Yang, W. Zhou, W. Yan, and X. Qian, “Cagnet: Coordinated
+attention guidance network for rgb-t crowd counting,” ESWA, vol. 243,
+p. 122753, 2024.
+[144] D. Wang, J. Liu, R. Liu, and X. Fan, “An interactively reinforced
+paradigm for joint infrared-visible image fusion and saliency object
+detection,” InfFus, vol. 98, p. 101828, 2023.
+[145] Q. Zhang, N. Huang, L. Yao, D. Zhang, C. Shan, and J. Han, “Rgb-t
+salient object detection via fusing multi-level cnn features,” IEEE TIP,
+vol. 29, pp. 3321–3335, 2019.
+[146] Z. Tu, Z. Li, C. Li, Y . Lang, and J. Tang, “Multi-interactive dual-
+decoder for rgb-thermal salient object detection,” IEEE TIP , vol. 30,
+pp. 5678–5691, 2021.
+[147] G. Liao, W. Gao, G. Li, J. Wang, and S. Kwong, “Cross-collaborative
+fusion-encoder network for robust rgb-thermal salient object detection,”
+IEEE TCSVT, vol. 32, no. 11, pp. 7646–7661, 2022.
+[148] F. Huo, X. Zhu, L. Zhang, Q. Liu, and Y . Shu, “Efficient context-
+guided stacked refinement network for rgb-t salient object detection,”
+IEEE TCSVT, vol. 32, no. 5, pp. 3111–3124, 2021.
+[149] T. Zhi, B. R. Pires, M. Hebert, and S. G. Narasimhan, “Deep material-
+aware cross-spectral stereo matching,” in CVPR, 2018, pp. 1916–1925.
+[150] X. Liang and C. Jung, “Deep cross spectral stereo matching using
+multi-spectral image fusion,” IEEE RAL, vol. 7, no. 2, pp. 5373–5380,
+2022.
+[151] Y . Guo, H. Kong, and S. Gu, “Unsupervised multi-spectrum stereo
+depth estimation for all-day vision,” IEEE TIV, 2023.
+[152] M. Arar, Y . Ginger, D. Danon, A. H. Bermano, and D. Cohen-Or,
+“Unsupervised multi-modal image registration via geometry preserving
+image-to-image translation,” in CVPR, 2020, pp. 13 407–13 416.
+[153] D. Wang, J. Liu, X. Fan, and R. Liu, “Unsupervised misaligned infrared
+and visible image fusion via cross-modality image generation and
+registration,” in IJCAI, 2022, pp. 3508–3515.
+[154] H. Xu, J. Ma, J. Yuan, Z. Le, and W. Liu, “Rfnet: Unsupervised network
+for mutually reinforcing multi-modal image registration and fusion,” in
+CVPR, 2022, pp. 19 647–19 656.
+[155] H. Xu, J. Yuan, and J. Ma, “MURF: mutually reinforcing multi-modal
+image registration and fusion,” IEEE TPAMI , vol. 45, no. 10, pp.
+12 148–12 166, 2023.
+[156] Z. Huang, J. Liu, X. Fan, R. Liu, W. Zhong, and Z. Luo, “Reconet:
+Recurrent correction network for fast and efficient multi-modality
+image fusion,” in ECCV, vol. 13678, 2022, pp. 539–555.
+[157] J. Zhang, L. Jiao, W. Ma, F. Liu, X. Liu, L. Li, P. Chen, and S. Yang,
+“Transformer based conditional gan for multimodal image fusion,”
+IEEE TMM, 2023.
+[158] D. Rao, T. Xu, and X.-J. Wu, “Tgfuse: An infrared and visible
+image fusion approach based on transformer and generative adversarial
+network,” IEEE TIP, 2023.
+[159] Y . Luo, H. Cha, L. Zuo, P. Cheng, and Q. Zhao, “General cross-
+modality registration framework for visible and infrared uav target
+image registration,” Scientific Reports, vol. 13, no. 1, p. 12941, 2023.
+[160] H. Xie, Y . Zhang, J. Qiu, X. Zhai, X. Liu, Y . Yang, S. Zhao, Y . Luo,
+and J. Zhong, “Semantics lead all: Towards unified image registration
+and fusion from a semantic perspective,” InfFus, vol. 98, p. 101835,
+2023.
+[161] Z. Liu, J. Liu, B. Zhang, L. Ma, X. Fan, and R. Liu, “Paif: Perception-
+aware infrared-visible image fusion for attack-tolerant semantic seg-
+mentation,” arXiv preprint arXiv:2308.03979 , 2023.
+[162] H. Xu, J. Ma, J. Jiang, X. Guo, and H. Ling, “U2fusion: A unified
+unsupervised image fusion network,” IEEE TPAMI, vol. 44, no. 1, pp.
+502–518, 2020.
+[163] H. Zhang and J. Ma, “Sdnet: A versatile squeeze-and-decomposition
+network for real-time image fusion,” IJCV, vol. 129, pp. 2761–2785,
+2021.
+[164] Y . Zhang, Y . Liu, P. Sun, H. Yan, X. Zhao, and L. Zhang, “Ifcnn:
+A general image fusion framework based on convolutional neural
+network,” InfFus, vol. 54, pp. 99–118, 2020.
+[165] H. Zhang, H. Xu, Y . Xiao, X. Guo, and J. Ma, “Rethinking the image
+fusion: A fast unified image fusion network based on proportional
+maintenance of gradient and intensity,” in AAAI, vol. 34, no. 07, 2020,
+pp. 12 797–12 804.
+[166] H. Xu, J. Ma, Z. Le, J. Jiang, and X. Guo, “Fusiondn: A unified densely
+connected network for image fusion,” in AAAI, vol. 34, no. 07, 2020,
+pp. 12 484–12 491.
+[167] J. Liu, R. Lin, G. Wu, R. Liu, Z. Luo, and X. Fan, “Coconet: Coupled
+contrastive learning network with multi-level feature ensemble for
+multi-modality image fusion,” IJCV, 2023.
+[168] Z. Zhao, H. Bai, Y . Zhu, J. Zhang, S. Xu, Y . Zhang, K. Zhang, D. Meng,
+R. Timofte, and L. Van Gool, “Ddfm: denoising diffusion model for
+multi-modality image fusion,” in ICCV, 2023.
+[169] Z. Zhao, L. Deng, H. Bai, Y . Cui, Z. Zhang, Y . Zhang, H. Qin, D. Chen,
+J. Zhang, P. W ANG et al., “Image fusion via vision-language model,”
+in ICML, 2024.
+[170] Z. Zhao, H. Bai, J. Zhang, Y . Zhang, K. Zhang, S. Xu, D. Chen,
+R. Timofte, and L. Van Gool, “Equivariant multi-modality image
+fusion,” in CVPR, 2024, pp. 25 912–25 921.
+[171] Z. Li, J. Liu, R. Liu, X. Fan, Z. Luo, and W. Gao, “Multiple task-
+oriented encoders for unified image fusion,” in ICME. IEEE, 2021,
+pp. 1–6.
+[172] X. Wei, Y . Guo, J. Yu, and B. Zhang, “Simultaneously optimizing
+perturbations and positions for black-box adversarial patch attacks,”
+IEEE TPAMI, 2022.
+[173] Y . Zhang, G. Zhang, P. Khanduri, M. Hong, S. Chang, and S. Liu,
+“Revisiting and advancing fast adversarial training through the lens of
+bi-level optimization,” in ICML. PMLR, 2022, pp. 26 693–26 712.
+[174] A. Toet, “The tno multiband image data collection,” Data in brief ,
+vol. 15, pp. 249–251, 2017.
+[175] X. Zhang, P. Ye, and G. Xiao, “Vifb: A visible and infrared image
+fusion benchmark,” in CVPR Workshops, 2020, pp. 104–105.
+[176] K. Takumi, K. Watanabe, Q. Ha, A. Tejero-De-Pablos, Y . Ushiku, and
+T. Harada, “Multispectral object detection for autonomous vehicles,”
+in ACMMM Thematic Workshops, 2017, pp. 35–43.
+[177] X. Jia, C. Zhu, M. Li, W. Tang, and W. Zhou, “Llvip: A visible-infrared
+paired dataset for low-light vision,” in ICCV, 2021, pp. 3496–3504.
+[178] Z. Wang, Y . Chen, W. Shao, H. Li, and L. Zhang, “Swinfuse: A residual
+swin transformer fusion network for infrared and visible images,” IEEE
+TIM, vol. 71, pp. 1–12, 2022.
+[179] P. Liang, J. Jiang, X. Liu, and J. Ma, “Fusion from decomposition: A
+self-supervised decomposition approach for image fusion,” in ECCV.
+Springer, 2022, pp. 719–735.
+[180] N. Zheng, M. Zhou, J. Huang, J. Hou, H. Li, Y . Xu, and F. Zhao,
+“Probing synergistic high-order interaction in infrared and visible
+image fusion,” in CVPR, 2024, pp. 26 384–26 395.
+
+===== PAGE 20 =====
+JOURNAL OF LATEX CLASS FILES, VOL. 14, NO. 8, AUGUST 2021 20
+[181] G. Qu, D. Zhang, and P. Yan, “Information measure for performance of
+image fusion,” Electronics Letters, vol. 38, no. 7, pp. 313–315, 2002.
+[182] Y . Han, Y . Cai, Y . Cao, and X. Xu, “A new image fusion performance
+metric based on visual information fidelity,” InfFus, vol. 14, no. 2, pp.
+127–135, 2013.
+[183] C. Xydeas and V . Petrovic, “Objective image fusion performance
+measure,” Electronics letters, vol. 36, no. 4, pp. 308–309, 2000.
+[184] J. Wesley Roberts, J. A. Van Aardt, and F. Babikker Ahmed, “Assess-
+ment of image fusion procedures using entropy, image quality, and
+multispectral classification,” JARS, vol. 2, no. 1, pp. 1–28, 2008.
+[185] A. M. Eskicioglu and P. S. Fisher, “Image quality measures and their
+performance,” IEEE TCOM, vol. 43, no. 12, pp. 2959–2965, 1995.
+[186] R. Yun-Jiang, “In-fibre bragg grating sensors,” Meas.Sci.Technol.,
+vol. 8, no. 4, pp. 355–375, 1997.
+[187] G. Cui, H. Feng, Z. Xu, L. Qi, and Y . Chen, “Detail preserved fusion
+of visible and infrared images using regional saliency extraction and
+multi-scale image decomposition,” Optics Communications , vol. 341,
+no. 341, pp. 199–209, 2015.
+[188] Z. Wang and A. C. Bovik, “Mean squared error: Love it or leave it? a
+new look at signal fidelity measures,” IEEE SPM , vol. 26, no. 1, pp.
+98–117, 2009.
+[189] X. Cao, J. Yang, L. Wang, Z. Xue, Q. Wang, and D. Shen, “Deep
+learning based inter-modality image registration supervised by intra-
+modality similarity,” in MLMI, 2018, pp. 55–63.
+[190] H. Li, J. Zhao, J. Li, Z. Yu, and G. Lu, “Feature dynamic alignment and
+refinement for infrared-visible image fusion: Translation robust fusion,”
+InfFus, vol. 95, pp. 26–41, 2023.
+[191] D. Wang, J. Liu, L. Ma, R. Liu, and X. Fan, “Improving misaligned
+multi-modality image fusion with one-stage progressive dense registra-
+tion,” CoRR, vol. abs/2308.11165, 2023.
+[192] E. Xie, W. Wang, Z. Yu, A. Anandkumar, J. M. Alvarez, and P. Luo,
+“Segformer: Simple and efficient design for semantic segmentation
+with transformers,” NeurIPS, vol. 34, pp. 12 077–12 090, 2021.
+[193] X. Wei, Y . Huang, Y . Sun, and J. Yu, “Unified adversarial patch for
+cross-modal attacks in the physical world,” in ICCV, 2023, pp. 4445–
+4454.
+[194] X. Wei, J. Yu, and Y . Huang, “Physically adversarial infrared patches
+with learnable shapes and locations,” in CVPR, 2023, pp. 12 334–
+12 342.
+Jinyuan Liu obtained his M.S. degree in Computer
+Science from Dalian University, Dalian, China, in
+2018. He completed his Ph.D. degree in Software
+Engineering at the Dalian University of Technology,
+Dalian, in 2022. He is currently a Postdoctoral
+Fellow in the School of Mechanical Engineering
+at Dalian University of Technology. His research
+interests include computer vision, image fusion, and
+deep learning.
+Guanyao Wu received his B.S. degree from the
+DUT-RU International School of Information Sci-
+ence and Engineering, Dalian University of Technol-
+ogy, China, in 2022. He is currently enrolled in an
+integrated master’s and Ph.D. program in Software
+Engineering at the same institution. His research in-
+terests include deep learning-based computer vision,
+with a focus on image fusion and processing.
+Zhu Liu received the B.S. degree in software engi-
+neering from the Dalian University of Technology,
+Dalian, China, in 2019. He received his M.S. degree
+in Software Engineering at Dalian University of
+Technology, Dalian, China, in 2022. He is pursuing
+the Ph.D. degree in Software Engineering at Dalian
+University of Technology, Dalian, China. His re-
+search interests include image processing and fusion.
+Di Wang received her M.S. degree in Computer
+Science and Engineering from Nanjing University
+of Science and Technology, Nanjing, China, in 2021.
+She is currently pursuing a Ph.D. degree in Software
+Engineering at Dalian University of Technology
+(DUT), Dalian, China. Her research interests include
+computer vision, image fusion, and deep learning.
+Zhiying Jiang received the B.E. degree in soft-
+ware engineering from Dalian Maritime University,
+China, in 2017, and the M.S. and Ph.D. degrees
+in software engineering from Dalian University of
+Technology, China, in 2020 and 2024, respectively.
+She is currently with the Key Laboratory for Ubiq-
+uitous Network and Service Software of Liaoning
+Province, Dalian University of Technology. Her
+research interests include computer vision, image
+restoration, and image stitching.
+Long Ma received the Ph.D. degree in software
+engineering at Dalian University of Technology,
+Dalian, China, in 2019. He is currently a Postdoc the
+School of Software Technology, Dalian University
+of Technology (DUT), Dalian, China. His research
+interests include computer vision and deep learning.
+ 
+Wei Zhong received the B.S. degree from Dalian
+University of Technology in 2008 and his M.S.
+and Ph.D. degrees from Waseda University in 2010
+and 2014, respectively. Currently, he is a Professor
+at Dalian University of Technology. His research
+focuses on computer vision, image processing, VLSI
+design, and hardware-software co-design.
+Xin Fan received the B.E. and Ph.D. degrees in
+information and communication engineering from
+Xian Jiaotong University, Xian, China, in 1998 and
+2004, respectively. He was with Oklahoma State
+University, Stillwater, from 2006 to 2007, as a post-
+doctoral research fellow. He joined the School of
+Software, Dalian University of Technology, Dalian,
+China, in 2009. His current research interests include
+computational geometry and machine learning, and
+their applications to low-level image processing and
+DTI-MR image analysis.
+Risheng Liu received his B.S. (2007) and Ph.D.
+(2012) from Dalian University of Technology,
+China. He conducted joint Ph.D. research at
+Carnegie Mellon University from 2010 to 2012 and
+was a Hong Kong Scholar at The Hong Kong
+Polytechnic University from 2016 to 2018. He is
+currently a full professor in the DUT School of
+Software Technology. His research interests include
+optimization, computer vision, and multimedia.

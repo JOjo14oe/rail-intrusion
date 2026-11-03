@@ -1,0 +1,1594 @@
+
+
+===== PAGE 1 =====
+1
+MS-DETR: Multispectral Pedestrian Detection
+Transformer with Loosely Coupled Fusion and
+Modality-Balanced Optimization
+Yinghui Xing, Member , IEEE, Shuo Yang, Song Wang, Shizhou Zhang, Guoqiang Liang, Xiuwei Zhang, and
+Yanning Zhang, Senior Member , IEEE
+Abstract—Multispectral pedestrian detection is an important
+task for many around-the-clock applications, since the visible
+and thermal modalities can provide complementary information
+especially under low light conditions. Due to the presence of
+two modalities, misalignment and modality imbalance are the
+most significant issues in multispectral pedestrian detection.
+In this paper, we propose MultiSpectral pedestrian DEtection
+TRansformer (MS-DETR) to fix above issues. MS-DETR consists
+of two modality-specific backbones and Transformer encoders,
+followed by a multi-modal Transformer decoder, and the visible
+and thermal features are fused in the multi-modal Transformer
+decoder. To well resist the misalignment between multi-modal
+images, we design a loosely coupled fusion strategy by sparsely
+sampling some keypoints from multi-modal features indepen-
+dently and fusing them with adaptively learned attention weights.
+Moreover, based on the insight that not only different modalities,
+but also different pedestrian instances tend to have different
+confidence scores to final detection, we further propose an
+instance-aware modality-balanced optimization strategy, which
+preserves visible and thermal decoder branches and aligns their
+predicted slots through an instance-wise dynamic loss. Our end-
+to-end MS-DETR shows superior performance on the challenging
+KAIST, CVC-14 and LLVIP benchmark datasets. The source
+code is available at https://github.com/YinghuiXing/MS-DETR.
+Index Terms —Multispectral pedestrian detection, end-to-end
+detector, loosely coupled fusion, modality-balanced optimization
+I. I NTRODUCTION
+P
+EDESTRIAN detection is a popular research topic in
+autonomous driving [1], automated video surveillance [2],
+and robotics. With the development of deep convolutional
+neural networks (CNN), many works are proposed [3]–[8],
+which greatly boost the development of pedestrian detection.
+However, as visible cameras are sensitive to lighting condi-
+tions, even an excellent detector can not accurately detect the
+This work was supported in part by the National Natural Science Foundation
+of China (NFSC) under Grant 62201467 and Grant 62101453; in part by
+the Guangdong Basic and Applied Basic Research Foundation under Grant
+2021A1515110544; in part by the Project funded by China Postdoctoral
+Science Foundation under Grant 2022TQ0260 and Grant 2023M742842;
+in part by the Young Talent Fund of Xi’an Association for Science and
+Technology under Grant 959202313088; in part by the Innovation Capability
+Support Program of Shaanxi (No. 2024ZC-KJXX-043), and in part by the
+Natural Science Basic Research Program of Shaanxi Provience (No. 2022JC-
+DW-08, and 2024JC-YBQN-0719). (Corresponding author: Shizhou Zhang.)
+Yinghui Xing, Shuo Yang, Song Wang, Shizhou Zhang, Guoqiang Liang,
+Xiuwei Zhang and Yanning Zhang are with the School of Computer Sci-
+ence, Northwestern Polytechnical University, Xi’an 710072, China. Yinghui
+Xing is also with the Research Development Institute of Northwestern
+Polytechnical University in Shenzhen, Shenzhen 518057, China. (e-mail:
+xyh 7491@nwpu.edu.cn).
+Instance#1 Instance#2
+...
+Densely coupled Fusion
+Loosely coupled Fusion
+Visible
+Thermal
+Visible
+Thermal
+Fig. 1. Different fusion strategy of multispectral pedestrian detection. Densely
+coupled fusion, e.g., concatenation and addition, tends to drift from the
+target on the misaligned image pairs. In contrast, our loosely coupled fusion
+aggregates sampled keypoints, which is robust to resist the misalignment.
+pedestrians in adverse environmental conditions [9], limiting
+many around-the-clock applications. To solve this problem,
+multispectral systems, which have two types of camera sen-
+sors, i.e. visible and thermal, have been introduced. Thermal
+infrared cameras capture infrared radiation emitted by objects.
+They are insensitive to illumination and weather changes,
+thus can provide complementary information under adverse
+illumination conditions.
+Benefitting from the availablity of KAIST dataset [10],
+some detection methods designed for visible modality are ex-
+tended to multispectral cases [10]–[19]. With the development
+of CNN on object detection, considerable progress has also
+been made on multispectral pedestrian detection. However,
+most of them require some cumbersome modules, like pre-
+defined anchor boxes [20], a large scale of proposals [21] and
+non-maximum suppression (NMS).
+Very recently, an end-to-end DEtection TRansformer
+(DETR) [22] is proposed to reformulate object detection task
+as a direct set prediction problem. In this paper, we propose
+MultiSpectral pedestrian DEtection TRansformer (MS-DETR)
+to extend the end-to-end DETR framework into the field of
+arXiv:2302.00290v4  [cs.CV]  5 Nov 2024
+
+===== PAGE 2 =====
+2
+Fig. 2. Overall architecture of our MS-DETR, where two modality-specific CNN backbones and two modality-specific Transformer encoders are used for
+visible and thermal images feature extraction. The multi-modal Transformer decoder takes feature maps, positional encodings (PE) and modality-specific
+content embeddings (CE) as inputs to generate three sets of prediction slots. V , F, T are acronyms for visible, fusion, and thermal.
+multispectral pedestrian detection. Our MS-DETR mainly con-
+tains two modality-specific CNN backbones and Transformer
+encoders, followed with a multi-modal Transformer decoder.
+Firstly, a ResNet-50 network combined with a Transformer
+encoder is adopted as the modality-specific feature extractor
+for the visible and thermal modality respectively. As for
+the multi-modal decoder, conventional densely coupled fusion
+strategies such as concatenation and addition would require
+strictly aligned features between the modalities when embed-
+ded into the Transformer layers. However, most of multispec-
+tral pedestrian detection datasets, like KAIST and CVC-14,
+have some misaligned pedestrian pairs between visible and
+thermal modalities. Using such densely coupled fusion strate-
+gies may not well aggregate the prominent features, leading to
+inferior performance, as shown in Fig. 1. Therefore, to well
+suit the multi-modal decoder of MS-DETR, we introduce a
+loosely coupled fusion strategy instead. By sparsely sampling
+some keypoints and their corresponding attention weights from
+the two modalities independently, the multi-modal features are
+aggregated adaptively, which naturally avoids the strict aligned
+requirement between visible and thermal modalities.
+From the other hand, during the optimization process of
+MS-DETR, it may be prone to be dominated by one of the
+modalities and the detector might suffer from the modality-
+imbalance problem [23], [24]. Generally speaking, in daytime,
+pedestrians in visible images include clearer texture features
+and in nighttime thermal images contain more distinct shape
+informations. While in many cases, pedestrians in thermal
+images still provide more obvious features than visible images
+in daytime such as the pedestrians stand in the shadow region
+or get over-exposed and vice versa. In other words, not only
+different modalities tend to obtain different confidence scores,
+but also each different pedestrian instance can have uneven
+contributions to the object losses under diverse illumination
+conditions. To alleviate this problem, we propose an instance-
+aware modality-balanced optimization strategy. To be specific,
+we additionally preserve visible and thermal decoder branches
+besides the fusion branch during the training phase. Based
+on the trident structure of the decoder, as shown in Fig. 3,
+we can then obtain three sets of predicted slots. Finally, an
+instance-wise dynamic loss is devised to adaptively adjust the
+contributions of each pedestrian instance to the model learning.
+The main contributions of the paper are summarized as
+follows:
+• We propose an end-to-end multispectral pedestrian detec-
+tion model, dubbed as MS-DETR, which extends DETR
+from single-modal detection task into multispectral case
+by introducing a multi-modal Transformer decoder.
+• A novel loosely coupled fusion strategy is proposed
+to improve the feature fusion efficiency towards multi-
+modal detection task. It shows great potential in DETR-
+like multi-modal framework compared with other fusion
+strategies.
+• An instance-aware modality-balanced optimization strat-
+egy is designed to align three sets of slots produced
+by three detection branches, i.e., visible, thermal and
+fusion branches. Based on these aligned slots, we use
+a dynamic loss to measure and adjust the contribution of
+each instance.
+• We conduct thorough experiments to verify the effec-
+tiveness of the proposed method on three widely used
+datasets, namely KAIST, CVC-14, and LLVIP. Experi-
+mental results demonstrate the superiority of the proposed
+MS-DETR.
+II. R ELATED WORKS
+A. Multispectral Pedestrian Detection
+Since the release of large-scale multi-modal datasets like
+KAIST Multispectral Pedestrian Benchmark [10], CVC14
+datasets [25], and LLVIP [26] etc, a variety of multispectral
+pedestrian detection methods were proposed [10]–[19], [27]–
+[38]. Hwang et al. [10] extended the aggregated channel
+features (ACF) by incorporating the intensity and histogram
+of oriented gradient (HOG) features of the thermal channel to
+propose an ACF+T+THOG method. However, ACF+T+THOG
+features lack discrimination in challenging circumstances, such
+as in cases of tiny appearance and poor visibility, therefore,
+Choi et al. [11] proposed to learn discriminative features
+through CNN and support vector regression (SVR). It is
+critical for multispectral pedestrian detectors to fuse multi-
+modal features. K ¨onig et al. [12] developed a multispectral
+region proposal network (RPN) based on Faster R-CNN [20].
+It fused the visible and thermal features by concatenation, and
+concluded that the best detection performance was obtained
+through halfway fusion [13].
+Apart from concatenation, there are other fusion strate-
+gies [39], [40]. Park et al. [14] estimated the detection prob-
+abilities of different modalities by a channel weighting fusion
+
+===== PAGE 3 =====
+3
+layer, and then utilized an accumulated probability fusion
+layer to combine them. Some works incorporated illumination
+information of images as prior knowledge, and introduced
+illumination-aware networks to adaptively merge visible and
+thermal features [15], [16], [37]. Guan et al. [16] developed
+a two-stream deep neural networks, which not only utilized
+two illumination-aware networks to produce fusion weights,
+but also trained the detector by jointly learning pedestrian
+detection and semantic segmentation tasks. Actually, many
+works [16], [27], [28], [37] used semantic segmentation as
+an auxiliary task, which was proved to be an effective way
+to boost the performance of multispectral pedestrian detec-
+tion. But the researchers should first obtain the semantic
+segmentation labels manually. Except for methods who made
+use of illumination information, Kim et al. [38] approached
+an uncertainty-aware multispectral pedestrian detection frame-
+work, which considered two types of uncertainties and fused
+the multispectral features by an uncertainty-aware feature fu-
+sion module. To well fuse images, Zhang et al. [17] converted
+detection labels into elliptical mask labels to roughly match
+the shape of pedestrians. Li et al. [29] used the dense fusion
+strategy to extract multilevel multispectral representations and
+then combined the prediction results of different modalities
+based on Dempster’s rule of combination. It not only integrated
+multi-modal information [18], [41], [42], but also provided
+a reliable prediction. In a word, existing methods generally
+incorporate various feature fusion modules within the model,
+and some of them introduce additional prior knowledge to
+further improve the detection results.
+Recently, some researchers emphasized the misaligment
+problem of KAIST [10] and CVC-14 [25], and pro-
+posed some strategies to reduce the influence of modality-
+misalingment [30]–[32]. Zhang et al. [30] directly designed
+a Region Feature Alignment (RFA) module to adaptively
+compensate misalignment of feature maps in two modalities.
+Zhou et al. [31] developed an illumination-aware feature
+alignment module to select complementary features according
+to illumination conditions, which obtained better detection
+results. Aiming at the unpaired multispectral pedestrian de-
+tection issue, Kim et al. [32] leveraged multi-label learning
+to extract the state-aware features. Zhu et al. [19] used multi-
+modal feature pyramid Transformer to overcome the large
+visual differences and misalignment between two modalities.
+Nonetheless, the misalignment in multi-modal images remains
+a difficult issue to solve.
+All above mentioned deep-learning based methods usually
+require explicit priors or the post-processing steps. In this
+paper, we propose an end-to-end multispectral pedestrian
+detection model without the need of any anchor mechanism,
+post-processing steps or the illumination/uncertainty prior, and
+is also robust to the misalignment of modalities.
+B. Object Detection with Transformer
+ViT-FRCNN [43] is the first attempt to use a pre-trained
+vision Transformer (ViT) [44] as the backbone for a Faster
+R-CNN [20] object detector. However, the design cannot
+get rid of the reliance on CNNs. You Only Look at One
+CE
+(V)
+CE 
+(F)
+CE 
+(T)
+PE
+Layer 1
+Image 
+Features
+Layer 2
+Add&Norm
+FFN FFN FFN
+Add&NormAdd&Norm
+Multi-Head
+SA
+Multi-Head
+SA
+Multi-Head
+SA
+Add&Norm Add&NormAdd&Norm
+Add&NormAdd&NormAdd&Norm
+Multi-Modal
+CA
+Fig. 3. The multi-modal Transformer decoder of MS-DETR. It has three
+branches, i.e. visible (V), fusion (F), and thermal (T), where PE, CE, SA, CA
+and FFN are acronyms for Positional Encodings, Content Embeddings, Self-
+Attention, Cross-Attention and feed forward network. Dashed lines indicate
+shared parameters.
+Sequence (YOLOS) [45] performs 2D object-level and region-
+level recognition based on the vanilla ViT with the fewest
+possible modifications, region priors, as well as inductive
+biases of the object detection task, demonstrating that 2D
+object detection can be accomplished in a pure sequence-to-
+sequence manner by taking a sequence of fixed-sized non-
+overlapping image patches as input. DETR [22], as one of
+the breakthroughs in object detection, treats object detection
+as a direct set prediction task without any hand-crafted prior
+knowledge like anchor generation or NMS. It is trained in
+an end-to-end manner with a set-based loss function, which
+performs bipartite matching between the predicted and the
+groundtruth bounding box [46]. DETR greatly simplifies the
+pipeline of object detection, and guides the tendency of
+object detection. Nevertheless, it suffers from slow training
+convergence. Several works have been proposed to improve
+it [47]–[52]. Conditional DETR [47] presented a conditional
+cross-attention mechanism to accelerate DETR’s training, and
+it converged 6.7 × faster than original DETR. Deformable
+DETR [50] was proposed to make the attention modules only
+attend to a small set of key sampling points around a reference,
+which makes it easy to aggregate multi-scale features. DAB-
+DETR [52] directly used box coordinates as queries to improve
+the query-to-feature similarity and to eliminate slow training
+convergence issue in DETR. Dynamic DETR [49] developed
+an alternative solution to boost the training convergence of
+DETR by replacing the cross-attention module in DETR
+decoder with an ROI-based dynamic attention.
+Apart from the single-modal detectors, there are also some
+multi-modal detectors build upon Transformer. Kamath et
+al. [53] proposed an modulated detection model, MDETR,
+for end-to-end multi-modal understanding, where the visual
+
+===== PAGE 4 =====
+4
+Visible
+Thermal
+PE CE (F)
+W-SUM (V)
+Linear1
+offsets
+reshape
+Multi-modal Feature Maps
+Linear3Linear2
+reference
+W-SUM (F)
+W-SUM (T)reshape
+weights
+Sampled Feature points
+qzqt
+ˆqp qp qA
+Softmaxattention qa
+Fig. 4. Details of multi-modal cross-attention (CA) module. The positional encodings pass through a linear layer to predict reference points, and they are
+then combined with content embeddings of fusion branch to predict offsets and their corresponding attention weights. Given a group of reference points and
+offsets, two groups of feature points are sampled from multi-modal multi-scale features. These sampled feature points are fused by weighted sum operations.
+and text features extracted from a convolutional backbone
+and a language model were concatenated and passed to
+the DETR [22] model for detection. However, the flattening
+operation on the visual features would destroy the spatial
+structure of images. Therefore, Maaz et al. [54] took the late
+multi-modal fusion strategy into MDETR framework and also
+introduced the multi-scale spatial context deformable attention
+to boost the training. MT-DETR [55], an end-to-end multi-
+modal detection model, used the residual fusion module and
+confident fusion module to fuse camera, lidar, radar, and
+time features for autonomous driving. They are presented
+for vision-language or camera-lidar alignment-related tasks,
+which are different from multispectral pedestrian detection that
+the inputs are both images. Zhu et al. [19] designed intra-
+modal feature pyramid Transformer and inter-modal feature
+pyramid Transformer to improve the semantic representations
+of features and make the model insensitive to misaligned
+images. In this paper, we propose to solve the problem of
+misalignment from the fusion aspect, and further consider
+the modality imbalance problem in multispectral pedestrian
+detection.
+III. P ROPOSED METHOD
+A. Overview
+We propose MS-DETR, an end-to-end multispectral pedes-
+trian detection model. As shown in Fig. 2, the proposed
+model is composed of three parts: two modality-specific CNN
+backbones, two modality-specific Transformer encoders and a
+multi-modal Transformer decoder.
+Given a pair of visible image IV and thermal image IT, each
+modality-specific CNN backbone first extracts multi-scale fea-
+ture maps. Then, these feature maps are fed into corresponding
+modality-specific encoder to aggregate the modality-specific
+multi-scale features through deformable self-attention. These
+two steps can be formulated as
+{Eml }Ll=1 = ϕm(φm(Im)), m∈ {V, T}, (1)
+where φm(·) and ϕm(·) denote the CNN backbone and Trans-
+former encoder of modality m. {Eml }Ll=1 represents the refined
+multi-scale feature maps, and l is the index of scale.
+The subsequent multi-modal Transformer decoder takes
+the multi-scale feature maps {Eml }Ll=1 of both modalities as
+the inputs. Besides, the learnable content embeddings (CE)
+combined with positional encodings (PE) are input to the
+decoder to perform cross-attention with the encoded input
+features. As shown in Fig. 3, instead of keeping the fusion
+branch alone, we preserve the visible and thermal branch
+additionally in the decoder. With the help of the constituted
+trident architecture, three sets of predicted slots can be ob-
+tained through the visible, thermal and fusion branches of the
+decoder, respectively.
+To alleviate the modality-imbalance problem as stated pre-
+viously, an instance-aware modality-balanced strategy is in-
+troduced to optimize the model. Specifically, an instance-wise
+dynamic weighting loss is enforced on top of the decoder to
+adaptively adjust the contributions of two modalities for each
+pedestrian instance.
+Since our CNN backbones and modality-specific Trans-
+former encoders are similar to previous works, we will not
+repeat them. Interested readers can refer to [50] for more
+details. In the following, we will elaborate the proposed multi-
+modal Transformer decoder and the instance-aware modality-
+balanced optimization strategy.
+B. Multi-Modal Transformer Decoder
+The detailed architecture of multi-modal Transformer de-
+coder is shown in Fig. 3. Our multi-modal Transformer
+
+===== PAGE 5 =====
+5
+TABLE I
+COMPARISONS WITH THE STATE -OF-THE -ART METHODS ON THE KAIST DATASET
+Methods
+M R−2 (IoU=0.5)
+Reasonable All
+R-All R-Day R-Night All Day Night
+ACF [10] 47.32 42.57 56.17 67.74 64.32 75.06
+Halfway Fusion [13] 25.75 24.88 26.59 49.20 47.67 52.35
+Fusion RPN+BF [12] 18.29 19.57 16.27 51.67 52.30 51.09
+IAF R-CNN [15] 15.73 14.55 18.26 44.24 42.47 47.70
+IATDNN+IASS [16] 14.95 14.67 15.72 46.45 46.77 46.34
+CIAN [33] 14.12 14.78 11.13 35.57 36.06 32.38
+MSDS-RCNN [27] 11.34 10.54 12.94 34.20 32.12 38.83
+AR-CNN [30] 9.34 9.94 8.38 34.95 34.36 36.12
+ProbEn3 [56] 9.07 7.66 4.89 - - -
+MBNet [31] 8.13 8.28 7.86 31.87 32.39 30.95
+CMPD [29] 8.16 8.77 7.31 28.98 28.30 30.56
+Faster RCNN+MFPT [19] 7.72 8.26 4.53 - - -
+MLPD [32] 7.58 7.96 6.95 28.49 28.39 28.69
+AANet-Faster RCNN [57] 6.91 6.66 7.31 - - -
+MCHE-CF [58] 6.71 7.58 5.52 - - -
+GAFF [17] 6.48 8.35 3.46 27.30 30.59 19.22
+MS-DETR 6.13 7.78 3.18 20.64 22.76 15.77
+“-” indicates the result is not provided.
+decoder has three branches, i.e., visible (V), fusion (F) and
+thermal (T) branches. Correspondingly, we have three con-
+tent embeddings (CEs) and a shared positional encoding
+(PE). In each layer, the multi-head Self-Attention (SA) and
+Feed-Forward Network (FFN) of visible, fusion and thermal
+branches have the same parameters, and all the three branches
+share a common multi-modal cross-attention (CA) module.
+The proposed loosely coupled fusion is achieved in the multi-
+modal cross-attention module. In the following, we will elab-
+orate this module.
+Loosely coupled fusion in multi-modal CA module. The
+multi-modal cross-attention builds upon deformable attention,
+where only a small set of key sampling points around a
+reference point are considered, regardless of the spatial size
+of the feature maps. Fig. 4 shows the detailed architecture
+of multi-modal cross-attention module. Specifically, the q-th
+positional encoding tq is taken into Linear1 to obtain the
+reference point’s coordinate ˆpq ∈ R2,
+ˆpq = Linear1(tq). (2)
+Meanwhile, the q-th positional encoding tq is also combined
+with content embedding zq of fusion branch to directly predict
+offsets of sampling points ∆pq ∈ R|m|×H×L×K×2 and their
+corresponding attention weights aq ∈ R|m|×H×L×K through
+two independent linear layers,
+∆pq = Linear2(zq + tq),
+aq = Linear3(zq + tq), (3)
+where m = {V, T} indicates the visible and thermal modali-
+ties, and |m| is the number of modalities. H, L and K are the
+number of attention heads, features scales and the sampling
+points in a certain feature map.
+After obtaining the prominent key elements and their cor-
+responding attention weights of different feature scales and
+modalities, we use the softmax function to normalize these
+weights, i.e. , Aq = Softmax( aq). The loosely coupled
+fusion is conducted only on these sampled points and their
+normalized attention weights of different modalities. The fused
+features can be obtained by
+Multi-ModalCAF =
+HX
+h=1
+W h
+"X
+m
+LX
+l=1
+KX
+k=1
+Aqmhlk · W ′hEml  αl  ˆpq + ∆pqmhlk
+#
+,
+(4)
+where ˆpq is the reference point of q-th query. m indicates
+the modality. h, l, and k represent the attention head, feature
+scale and sampling point, respectively. αl
+ ˆpq re-scales ˆpq
+to the input feature maps of the l-th scale. ∆pqhlk and
+Aqhlk represent the sampling offset and the scalar attention
+weight of the k-th sampling point in the l-th feature level
+for the h-th attention head. We can observe from (4) that
+the fusion of visible and thermal features is only conducted
+during the process of aggregating prominent key elements of
+two modalities, thus we call it “loosely coupled fusion”.
+Based on the “loosely coupled fusion”, we can easily intro-
+duce extra two detection branches to avoid under-optimizing
+uni-modal representation [23], [24]. As shown in Fig. 4, we
+divide the offsets ∆pq into ∆pVq and ∆pTq . Correspondingly,
+the attention weights aq are also splitted to two modality
+specific components aVq and aTq . After the normalization of
+softmax, we obtain the modality specific attention weights
+AVq = Softmax( aVq ) and ATq = Softmax( aTq ). Therefore,
+extra two groups of uni-modal features in the multi-modal
+cross-attention module are formulated by
+Multi-ModalCAV =
+HX
+h=1
+W h
+" LX
+l=1
+KX
+k=1
+AVqhlk · W ′hEVl  αl  ˆpq + ∆pVqhlk
+#
+,
+(5)
+
+===== PAGE 6 =====
+6
+Multi-ModalCAT =
+HX
+h=1
+W h
+" LX
+l=1
+KX
+k=1
+ATqhlk · W ′hETl  αl  ˆpq + ∆pTqhlk
+#
+.
+(6)
+C. Instance-aware Modality-Balanced Optimization
+By passing the decoder output to the modality-specific
+detection head, we can obtain three sets of predictions. Let
+i ∈ {V, T, F} indicates different branches, these predictions
+can be represented by {ˆyin}Nn=1, i ∈ {V, T, F}. As the
+distinct characteristics of visible and thermal images, their
+predictions may not be consistent. To balance the contribution
+of different modalities, we compare and then select the optimal
+permutation of slots predictions in current iteration. After
+that, the predictions of all the three branches are re-arranged
+according to the selected permutation ˆσ.
+To obtain ˆσ, we should firstly calculate the optimal permu-
+tation for each branch i
+ˆσi = arg min
+σ∈SN
+NX
+n=1
+Lmatch
+
+yn, ˆyiσ(n)
+
+, i∈ {V, T, F}, (7)
+where SN is the set of all permutations of N elements.
+Lmatch
+
+yn, ˆyiσ(n)
+
+is the matching cost between ground-truth
+yn and the prediction produced by σ(n)-th anchor box of
+modality i, and can be computed by
+Lmatch
+
+yn, ˆyiσ(n)
+
+=Lf ocal
+
+yn, ˆyiσ(n)
+
++ LL1
+
+yn, ˆyiσ(n)
+
++ LGIoU
+
+yn, ˆyiσ(n)
+
+.
+(8)
+By comparing the matching costs under the permutations ˆσV,
+ˆσT and ˆσF, we obtain the optimal permutation
+ˆσ = arg min
+σ∈{ˆσi}
+NX
+n=1
+Lmatch
+
+yn, ˆyiσ(n)
+
+, i∈ {V, T, F}. (9)
+Then, the slots of other branches are re-arranged according
+to ˆσ, and their matching costs are updated under the new
+permutation.
+In order to further boost the detection performance and to
+balance the training, we propose an instance-wise dynamic
+loss. Specifically, the matching costs are calculated under
+the optimal permutation in instance-level, and then, they are
+utilized to measure the degree of prediction confidence for dif-
+ferent instances to adaptively adjust the instance-level weights
+of three branch. Suppose that there are T pedestrian instances,
+we use ciˆσ(j) to represent the instance-level matching cost of j-
+th instance in modality i under the optimal permutation ˆσ. The
+dynamic fusion parameters λiσ(j), (i ∈ {V, T, F}) are obtained
+through
+λiσ(j) = eciσ(j)
+ecVσ(j) + ecFσ(j) + ecTσ(j) , j= 1, · · ·, T. (10)
+Then the loss of modality i is composed of a dynamic
+loss term for predicted pedestrians and a focal loss term for
+predicted non-pedestrians:
+Li =
+TX
+s=1
+λiˆσ(s)·Lmatch
+
+ys, ˆyiˆσ(s)
+
++
+NX
+s=T +1
+Lf ocal
+
+ys, ˆyiˆσ(s)
+
+.
+(11)
+Finally, the total loss of our MS-DETR is
+L = LF + LV + LT. (12)
+D. Inference process
+In the training stage, we preserve visible, thermal and
+fusion branches to calculate the instance-aware loss function
+for modality balance. After modality-balanced optimization,
+any of the three branches has the ability to obtain accurate
+detection results, which has been verified, and the results can
+be found in Table VI. Therefore, during inference, we can use
+one of the three branches to obtain results. And we use the
+results of fusion branch by default.
+IV. E XPERIMENTS
+A. Datasets and Evaluation Metric
+Following previous methods, we conduct experiments on
+three popular datasets, i.e. KAIST, CVC-14 and LLVIP.
+KAIST. Originally, the KAIST Multispectral Pedestrian
+Benchmark [10] contains 95,328 color-thermal image pairs
+with 103,128 dense annotations covering 1,182 unique pedes-
+trians. For fair comparison with previous methods, we use
+7,601 images with sanitized annotations [27] for training and
+2,252 images with improved annotations by Liu et al. [13] for
+testing. Specifically, in the test set, 1,455 images are captured
+during daytime and the remaining during nighttime.
+CVC-14. The CVC-14 dataset [25] has 7,085 visible
+(grayscale) and thermal image pairs for training, where 3,695
+pairs are captured during daytime and 3,390 pairs during
+nighttime. The test set is composed of 1,433 frames. Since
+the cameras are not well calibrated, the annotations in CVC-14
+are individually provided in each modality. Besides, as shown
+in Fig. 5, the CVC-14 dataset suffers from a severer position
+shift problem, which makes it more difficult.
+LLVIP. LLVIP [26] is a paired visible-infrared dataset for
+low-light vision. It has 15,488 pairs of aligned images, with
+42,437 annotated pedestrians totally. Most of them are taken
+under the dark scenario by surveillance cameras. The quality
+of original visible and thermal images in LLVIP dataset is
+significantly higher than that of the KAIST and CVC-14
+datasets. The visible and thermal images have the resolution
+of 1920 × 1080 and 1280 × 720 respectively.
+Evaluation metric. For KAIST and CVC-14, we employ
+the log miss rate ( M R−2) averaged over the false positive per
+image (FPPI) with a range of [10−2, 100] for evaluation [10],
+[59]. A lower M R−2 indicates better performance. Moreover,
+we will report the performance under two evaluation settings
+for KAIST dataset, i.e. “ Reasonable” and “ All”. The former
+only considers the pedestrians taller than 55 pixels with no
+or partial occlusions while the latter uses whole test data
+including small or heavy occluded pedestrians. Therefore, the
+“All” setting is more challenging than “ Reasonable” setting.
+
+===== PAGE 7 =====
+7
+TABLE II
+PERFORMANCE COMPARISONS ON THE SIX SUBSETS OF KAIST DATASET
+Methods Near Medium Far None Partial Heavy All
+ACF [10] 28.74 53.67 88.20 62.94 81.40 88.08 67.74
+Halfway Fusion [13] 8.13 30.34 75.70 43.13 65.21 74.36 49.20
+Fusion RPN+BF [12] 0.04 30.87 88.86 47.45 56.10 72.20 51.67
+IAF R-CNN [15] 0.96 25.54 77.84 40.17 48.40 69.76 44.24
+IATDNN+IASS [16] 0.04 28.55 83.42 45.43 46.25 64.57 46.45
+CIAN [33] 3.71 19.04 55.82 30.31 41.57 62.48 35.57
+MSDS-RCNN [27] 1.29 16.18 63.76 29.94 38.46 63.30 34.20
+AR-CNN [30] 0.00 16.08 69.00 31.40 38.63 55.73 34.95
+MBNet [31] 0.00 16.07 55.99 27.74 35.43 59.14 31.87
+CMPD [29] 0.00 12.99 51.22 24.04 33.88 59.37 28.98
+MLPD [32] 0.00 12.10 52.79 25.18 29.84 55.05 28.49
+MCHE-CF [58] 0.00 10.40 36.75 18.05 24.33 54.43 -
+GAFF [17] 0.00 13.23 46.87 23.83 24.31 47.97 27.30
+MS-DETR 0.00 9.70 32.41 16.54 23.61 48.71 20.64
+(a) (b)
+Fig. 5. The visualization examples of position shift problem in CVC-
+14 dataset, where the pedestrians in (a) are grossly misaligned in spatial
+dimensions and the number of pedestrians in (b) are unpaired.
+For LLVIP, we employ the commonly used average pre-
+cision metrics ( APiou) under different IoU thresholds as
+evaluation metrics. Specifically, we select AP0.5, AP0.75, and
+AP as three metrics for comparison. The AP metric represents
+the mean APiou, whose IoU ranging from 0.50 to 0.95 with
+a stride of 0.05.
+B. Implementation Details
+Since DETR-like detectors are generally data-hungry [60],
+we pretrain our model on COCO dataset. In addition to random
+resize, flip and affine, we also adopt strong data augmentation,
+including Mixup [61], Mosaic [62] and RandAugment [63].
+The proposed MS-DETR is implemented with Pytorch [64].
+The backbones for both visible and thermal branches are
+ResNet50 [65], and the number of feature scales are L = 4.
+Both Transformer encoder and decoder have six layers. MS-
+DETR has 76.38M parameters in total, and the amount of
+floating-point operations is 258.84 GFLOPs for an input image
+with the size of 640 ×512.
+In our multi-modal decoder, the number of attention heads,
+sampling points, and object queries are set to be H = 8 ,
+K = 4 and N = 300. The model is trained using the Adam
+optimizer [66]. We train it twenty epochs for KAIST and
+LLVIP datasets, and ten epoches for CVC-14 dataset. The
+learning rate is initialized as 0.0001 and is decayed at the
+half of the training process by a factor of ten. When we train
+our model on four RTX-3090 GPUs with a batch size of 2,
+the training lasts approximately 7 hours. The inference time
+is approximately 0.11 seconds per image.
+C. Comparisons with State-of-the-art
+KAIST. We compare our model on KAIST dataset
+with several state-of-the-art methods, including ACF [10],
+Halfway Fusion [13], Fusion RPN+BF [12], IAF R-
+CNN [15], IATDNN+IASS [16], CIAN [33], MSDS-
+RCNN [27], AR-CNN [30], MBNet [31], CMPD [29], Faster
+RCNN+MFPT [19], MLPD [32], GAFF [17], ProbEn 3 [56],
+MCHE-CF [58] and AANet-Faster RCNN [57]. Table I pro-
+vides the performance comparisons. We can observe our pro-
+posed model achieves the best performance under both “ Rea-
+sonable” and “ All” settings, especially under “ All” setting,
+where our MS-DETR outperformed GAFF [17] by 6.66%.
+Note that the “ All” setting is more difficult since it con-
+tains small and heavy occluded pedestrians. This performance
+contrast illustrates that our method can well detect small
+pedestrians. To validate this, we further evaluate our method
+on the six subsets in terms of pedestrian distance and occlusion
+level, whose results are shown in Table II. In this table, we
+can see our method largely reduce the miss rate in almost
+all cases, except for heavy occluded pedestrians. Note that
+MS-DETR performs the second best in Heavy subset, with a
+slightly higher M R−2 than GAFF [17]. Actually, almost all
+comparison methods do not perform well on the Heavy subset.
+Because more than 50 % of the pedestrian area are occluded,
+only weaker features can be learned. In GAFF [17], the
+pedestrian mask is supervised by a groundtruth mask generated
+from the bounding box annotation, and the visible and thermal
+features are enhanced with the guidance of segmentation
+masks. We believe this pixel-level supervision truly enhances
+the features and helps the model to concentrate more on the
+pedestrians even in the scenarios with severe occlusions.
+Moreover, the FPPI-MR curves on the “ Reasonable” and
+“All” settings are also demonstrated in Fig. 6 and Fig. 7. Under
+the “Reasonable” setting, our model shows great improve-
+
+===== PAGE 8 =====
+8
+10 3
+ 10 2
+ 10 1
+ 100 101
+False positives per image
+.01
+.05
+.10
+.20
+.30
+.40
+.50
+.64
+.80
+1
+Miss rate
+All
+47.32%, ACF
+25.75%, Halfway-Fusion
+18.29%, Fusion-RPN+BF
+15.73%, IAF-RCNN
+14.45%, IATDNN-IAMSS
+14.12%, CIAN
+11.34%, MSDS-RCNN
+9.34%, ARCNN
+8.13%, MBNet
+7.58%, MLPD
+6.38%, GAFF
+6.13%, MS-DETR(ours)
+10 3
+ 10 2
+ 10 1
+ 100 101
+False positives per image
+.01
+.05
+.10
+.20
+.30
+.40
+.50
+.64
+.80
+1
+Miss rate
+Day
+42.65%, ACF
+24.89%, Halfway-Fusion
+19.57%, Fusion-RPN+BF
+14.55%, IAF-RCNN
+14.18%, IATDNN-IAMSS
+14.78%, CIAN
+10.54%, MSDS-RCNN
+9.94%, ARCNN
+8.28%, MBNet
+7.96%, MLPD
+8.25%, GAFF
+7.78%, MS-DETR(ours)
+10 3
+ 10 2
+ 10 1
+ 100 101
+False positives per image
+.01
+.05
+.10
+.20
+.30
+.40
+.50
+.64
+.80
+1
+Miss rate
+Night
+56.17%, ACF
+26.59%, Halfway-Fusion
+16.27%, Fusion-RPN+BF
+18.26%, IAF-RCNN
+15.28%, IATDNN-IAMSS
+11.13%, CIAN
+12.94%, MSDS-RCNN
+8.38%, ARCNN
+7.86%, MBNet
+6.95%, MLPD
+3.46%, GAFF
+3.18%, MS-DETR(ours)
+Fig. 6. The FPPI-MR curces comparisons with the state-of-the-art methods on the KAIST dataset under “ Reasonable” setting.
+10 3
+ 10 2
+ 10 1
+ 100 101
+False positives per image
+.01
+.05
+.10
+.20
+.30
+.40
+.50
+.64
+.80
+1
+Miss rate
+All
+67.74%, ACF
+51.67%, Fusion-RPN+BF
+49.20%, Halfway-Fusion
+46.45%, IATDNN-IAMSS
+44.24%, IAF-RCNN
+35.57%, CIAN
+34.95%, ARCNN
+34.20%, MSDS-RCNN
+31.87%, MBNet
+28.49%, MLPD
+27.30%, GAFF
+20.64%, MS-DETR(ours)
+10 3
+ 10 2
+ 10 1
+ 100 101
+False positives per image
+.01
+.05
+.10
+.20
+.30
+.40
+.50
+.64
+.80
+1
+Miss rate
+Day
+64.32%, ACF
+52.30%, Fusion-RPN+BF
+47.67%, Halfway-Fusion
+46.77%, IATDNN-IAMSS
+42.47%, IAF-RCNN
+36.06%, CIAN
+34.36%, ARCNN
+32.12%, MSDS-RCNN
+32.39%, MBNet
+28.39%, MLPD
+30.59%, GAFF
+22.76%, MS-DETR(ours)
+10 3
+ 10 2
+ 10 1
+ 100 101
+False positives per image
+.01
+.05
+.10
+.20
+.30
+.40
+.50
+.64
+.80
+1
+Miss rate
+Night
+75.06%, ACF
+51.09%, Fusion-RPN+BF
+52.35%, Halfway-Fusion
+46.34%, IATDNN-IAMSS
+47.70%, IAF-RCNN
+32.38%, CIAN
+36.12%, ARCNN
+38.83%, MSDS-RCNN
+30.95%, MBNet
+28.69%, MLPD
+19.22%, GAFF
+15.77%, MS-DETR(ours)
+Fig. 7. The FPPI-MR curces comparisons with the state-of-the-art methods on the KAIST dataset under “ All” setting.
+ments in the night scenarios, where it obtains the lowest miss
+rate in a wide range. Furthermore, we can observe from Fig. 7
+that MS-DETR has obvious advantages in most FPPI ranges
+compared to all comparison methods both in daytime and
+nighttime scenarios. To be specific, our model demonstrates
+larger superiority than other comparisons at a bigger FPPI
+under both “ Reasonable” and “ All” settings.
+Finally, we visualize some detection results in Fig. 8, where
+the yellow rectangles locate the ground truth pedestrians, the
+green rectangles represent the predictions of MBNet [31],
+MLPD [32], GAFF [17] and MS-DETR, and red rectangles are
+missed detection samples of these detectors. From these fig-
+ures, we can observe that there are some pedestrians missed by
+the compared methods. In contrast, our model can well locate
+these challenging samples, especially these small pedestrians.
+Furthermore, the positive sample confidence scores output by
+our model is relatively higher than others. We contribute the
+robust detection of pedestrians to our loosely coupled fusion
+strategy, which can eliminate the interference of occlusion by
+fusing the prominent key elements.
+CVC-14. Our model is compared with MACF [14], Choi et
+al. [11], Halfway Fusion [13], Park et al. [14], AR-CNN [30],
+MBNet [31], CMPD [29], MLPD [32], MCHE-CF [58] and
+AANet-Faster RCNN [57] on the CVC-14 dataset. Like [31],
+we fine-tune the model pretrained on the KAIST dataset using
+the CVC-14 to further boost the performance. Due to the
+serious misalignment between visible and thermal modalities
+in CVC-14 dataset, we also adopt the strategy in [30], where
+the pedestrians in the visible modality as the training target
+and the pedestrians in thermal modality as a reference. The
+final results using dual-modalities are listed in Table III. From
+the table, we can observe that MS-DETR performs well under
+“All” and “Night” settings. As for the performance under the
+“Day” setting, we conjecture that the suboptimal result of MS-
+DETR is attributed to the fact that the loosely coupled fusion
+strategy only considers selected points. This sparse selection
+process loses some texture information, which is vital for
+visible images, especially in daytime scenes. Note that our
+model does not have any well-designed alignment modules or
+operations, but it can also obtain lower miss rate compared
+with other models, especially in night scenario.
+Some visualizations are provided in Fig. 9, where the
+groundtruthes, true positives, and false positive boxes are
+shown in yellow, green, and blue colors, respectively. We
+observe that MS-DETR has fewer false positives and, in some
+scenarios, can detect more pedestrians on the challenging
+CVC-14 dataset, despite its partial annotations. At the same
+time, it shows robustness to occlusion. In contrast, MBNet has
+more false positives.
+LLVIP. For LLVIP dataset, we compare our method with
+
+===== PAGE 9 =====
+9
+Ground TruthMBNet MLPD GAFF MS-DETR
+Fig. 8. Some detection results of our model and other three state-of-the-art models on KAIST dataset. The groundtruths, predictions and missed predictions
+of different detectors are marked in yellow, green and red boxes. Our MS-DETR demonstrates superior results with less missed detections.
+DCMNet [67], CSAA [68], CFT [69] and LRAF-Net [70]. The
+results are provided in Table IV. Note that we also present the
+experimental results of single-modality models. Since LLVIP
+is a dataset of night scenes, the detection results on thermal
+modality are generally higher than that on visible modality. In
+the multi-modality case, our model achieves the comparable
+performance as LRAF-Net [70] and significantly outperforms
+other comparison methods. It should be noted that even our
+single-modality baselines, like the thermal-modality baseline,
+can obtain superior results than multi-modal comparison meth-
+ods, which demonstrates the potential of DETR-like models.
+D. Ablation Studies
+To investigate the effectiveness of our proposed loosely
+coupled fusion and modality-balanced optimization, we con-
+duct some ablation studies. For simplicity, we only conduct
+experiments on KAIST dataset and provide the miss rate under
+both the “ Reasonable” and “ All” settings.
+Effectiveness of loosely coupled fusion strategy. We
+conduct a series of experiments, including the single-modal
+detection and the multi-modal detection with different fusion
+strategies, to verify the effectiveness of proposed loosely
+coupled fusion. We can firstly observe from Table V that
+
+===== PAGE 10 =====
+10
+Ground TruthMBNet MS-DETR
+Fig. 9. Some detection results on CVC-14 dataset. The groundtruths, correct
+predictions, and false positives are marked in yellow, green, and blue boxes,
+respectively. The selected scenes represent typical examples of crowded, close-
+up, and occluded situations. It is evident that MS-DETR exhibits fewer false
+positives and detects pedestrians more accurately.
+TABLE III
+PERFORMANCE COMPARISONS ON CVC-14 DATASET
+Methods M R−2(IoU=0.5)All Day Night
+MACF [14] 60.1 61.3 48.2
+Choi et al. [11] 47.3 49.3 43.8
+Halfway Fusion [14] 37.0 38.1 34.4
+Park et al. [14] 31.4 31.8 30.8
+AR-CNN [30] 22.1 24.7 18.1
+MCHE-CF [58] 21.3 24.0 17.5
+MLPD [32] 21.3 24.2 18.0
+MBNet* [31] 21.1 24.7 13.5
+AANet-Faster RCNN* [57] 17.9 22.6 10.9
+MS-DETR 20.0 23.0 15.1
+MS-DETR* 16.9 24.1 8.8
+* indicates that the model is clearly announced to be fine-tuned from the
+KAIST pretrained model.
+multi-modal detection shows better performance in detecting
+pedestrians than single-modality by a large margin. Then we
+TABLE IV
+COMPARISONS WITH THE STATE-OF-THE -ART METHODS ON LLVIP
+DATASET
+Methods Data AP0.5 AP0.75 AP
+single-modality
+YOLOv3 [26] V 85.9 37.9 43.3
+YOLOv5 [26] V 90.8 51.9 50.0
+Ours V 91.8 50.9 50.8
+YOLOv3 [26] T 89.7 53.4 52.8
+YOLOv5 [26] T 94.6 72.2 61.9
+Ours T 97.5 75.1 65.3
+multi-modality
+Faster RCNN + DCMNet [67] V+T - - 58.4
+Cascade RCNN + DCMNet [67] V+T - - 61.5
+RetinaNet + DCMNet [67] V+T - - 58.9
+SABL + DCMNet [67] V+T - - 60.6
+Reppoints + DCMNet [67] V+T - - 58.7
+CSAA [68] V+T 94.3 66.6 59.2
+CFT [69] V+T 97.5 72.9 63.6
+LRAF-Net [70] V+T 97.9 - 66.3
+MS-DETR V+T 97.9 76.3 66.1
+investigate the influence of different fusion strategies.
+In [13], the authors divided the fusion methods into early
+fusion, halfway fusion and late fusion according to the stage at
+which the feature fusion operation is performed. Similarly, our
+CNN backbone, i.e., ResNet-50, has five stages, named stage-
+1 to stage-5. Taking the whole Transformer encoder as the last
+stage, we totally have six stages. Different fusion strategies are
+defined as follows:
+• Early fusion begins fusion after stage-1 and shares
+network parameters from stage-2 to stage-6.
+• Halfway fusion#1 performs fusion from stage-3 to stage-
+5 and shares networks parameters of stage-6.
+• Halfway fusion#2 is performed after stage-3 and shares
+from stage-4 to stage-6.
+• Encoder fusion is performed in Transformer encoder, i.e.
+stage-6, using the deformable self-attention module.
+• Late fusion only fuses features after stage-6.
+As for the fusion process, we first concatenate corresponding
+features, and then use a 3 × 3 convolutional layer, followed by
+batch-normalization and ReLU activation, to obtain the fused
+features. The results are provided in Table V. When comparing
+different fusion strategies, we find that late fusion has better
+performance, and our proposed loosely coupled fusion brings
+the drop of M R−2 from 0.77 to 3.49, which validates its
+effectiveness in DETR-like detection models.
+The ablation experiment on CVC-14 dataset is also shown in
+Table V. From the ablations, we can observe that our proposed
+loosely coupled fusion and the modality-balanced optimization
+strategies show great potential on CVC-14 dataset. We believe
+this may be due to the large number of misaligned samples in
+the CVC-14 dataset. While the dataset provides annotations for
+both modalities, we used only the visible modality annotations
+for training. Consequently, the trained model naturally leans
+towards the visible modality, making the inclusion of loosely
+coupled fusion and modality-balanced optimization particu-
+larly critical.
+Effectiveness of modality-balanced optimization strat-
+egy. To better measure and balance the contribution of vis-
+ible and thermal modalities, we design an instance-aware
+
+===== PAGE 11 =====
+11
+TABLE V
+ABLATION STUDIES . ( MBO: Modality-Balanced Optimization. V: Visible. T: Thermal )
+Dataset Modality Fusion Strategy Metrics
+KAIST
+Early Halfway #1 Halfway #2 Encoder Late Loosely Coupled MBO R-All
+V 18.18
+T 15.61
+V+T
+✓ 10.75
+✓ 8.60
+✓ 7.96
+✓ 8.70
+✓ 7.56
+✓ 6.79
+✓ ✓ 6.13
+CVC-14 V+T
+✓ 24.09
+✓ 18.90
+✓ 21.79
+✓ 24.31
+✓ 23.27
+✓ ✓ 16.90
+TABLE VI
+PERFORMANCE COMPARISONS WITHIN THREE DETECTION BRANCH ON
+KAIST DATASET
+Detection Branch R-All R-Day R-Night All Day Night
+Visible 6.28 7.98 3.37 20.92 23.19 15.77
+Thermal 6.16 7.89 3.22 20.93 23.37 15.94
+Fusion 6.13 7.78 3.18 20.64 22.76 15.77
+TABLE VII
+EFFECT OF THE NUMBER OF ENCODER LAYERS ON KAIST DATASET
+Number of Layers Reasonable AllR-All R-Day R-Night All Day Night
+6 6.13 7.78 3.18 20.64 22.76 15.77
+5 6.50 8.39 3.19 22.36 24.58 16.48
+4 7.08 9.05 3.56 23.10 25.26 18.02
+3 6.77 8.14 4.15 22.18 24.26 17.08
+2 6.97 8.50 4.15 22.69 24.57 18.55
+1 7.77 9.74 4.01 22.31 24.54 16.90
+Modality-Balanced Optimization (MBO) strategy, where we
+select the branch that has minimum cost in current iteration
+as reference branch to re-arrange the permutation of prediction
+slots, rather than directly take fusion branch as reference.
+Further, we employ a dynamic loss to fuse different branches
+using an instance-level weight. It can be observed from
+Table V that the model trained on such a strategy can bring
+0.66% drops of M R−2 without introducing any additional
+modules. Therefore, we derive that modality-balanced opti-
+mization strategy boosts the detection performance by unifying
+the permutation of prediction slots and dynamically adjusting
+the weights of three branches in instance level.
+To investigate its modality balance ability, we present the
+detection results of all three branches (Fusion, Visible and
+Thermal) in Table VI. We can find that three branches have
+balanced detection results under both “ All” and “ Reasonable”
+settings, which further proves the effectiveness of MBO strat-
+egy.
+Influence of hyperparameters in MS-DETR. To further
+explore the influence of hyperparameters, i.e. , the number
+TABLE VIII
+EFFECT OF THE NUMBER OF DECODER LAYERS ON KAIST DATASET
+Number of Layers Reasonable AllR-All R-Day R-Night All Day Night
+6 6.13 7.78 3.18 20.64 22.76 15.77
+5 6.89 8.09 4.31 22.83 24.44 19.23
+4 7.50 9.36 4.17 22.85 25.20 17.80
+3 8.25 10.27 4.56 23.24 24.99 19.47
+2 10.44 12.07 7.65 26.54 28.97 20.75
+1 22.02 24.92 15.21 37.37 40.65 29.56
+TABLE IX
+EFFECT OF THE NUMBER OF QUERIES ON KAIST DATASET
+Number of Queries Reasonable AllR-All R-Day R-Night All Day Night
+300 6.13 7.78 3.18 20.64 22.76 15.77
+200 6.79 8.36 3.73 21.27 23.01 17.50
+100 6.65 7.90 4.27 21.63 24.14 16.36
+50 8.09 10.08 4.34 21.88 24.53 16.15
+of encoder layers, decoder layers, and queries in MS-DETR,
+we conduct a series of experiments. Table VII provides an
+ablation study on the number of encoder layers. It shows
+that as the number of encoder layers increases, the miss rate
+M R−2 also somewhat diminishes. In contrast, the number
+of decoder layers has a more significant effect on model
+performance, as shown in Table VIII. It’s evident that as
+the number of decoder layers decreases, the model’s perfor-
+mance significantly diminishes. For instance, with just one
+decoder layer, the index surges by 15.89%. This underscores
+the crucial importance of the decoder design. Additionally,
+MS-DETR’s performance is expected to improve with an
+increased number of queries. Table IX presents an ablation
+study on the number of queries, demonstrating that the model’s
+performance moderately improves as the number of queries
+increases. Balancing precision and efficiency, we choose to
+retain the default number of queries in DETR at 300.
+
+===== PAGE 12 =====
+12
+Fig. 10. Visualization of loosely coupled fusion strategy, where the first two rows are from the KAIST dataset, and the last two rows are from the CVC-14
+dataset. Points are selected and fused with their corresponding weights (whose weights are denoted through the size of stars “ ⋆”), which demonstrates that
+the model focuses on the pedestrians within the sample pair. One can zoom in for more details.
+E. Visualizations of Loosely Coupled Fusion
+To further demonstrate the effectiveness of the loosely
+coupled fusion strategy, we visualize the selected points from
+MS-DETR on the test set. We use red stars to represent the
+selected points, with their size indicating the magnitude of
+the weights (One can zoom in for a closer look). Note that
+to ensure overall visibility, we limit the stars from becoming
+too large. The first two rows of Fig. 10 show the selected
+points from the KAIST dataset, from which we can observe
+that MS-DETR performs well even in scenarios with crowed
+pedestrians at relatively long distances. The fusion of these
+accurately located points makes the model concentrate on the
+most discriminative features of two modalities.
+The last two rows of Fig. 10 are from the test set on CVC-
+14 dataset. When severe misalignment exists, especially in the
+middle two columns, MS-DETR consistently performs well,
+accurately locating the selected points on the pedestrians. In
+scenes where pedestrians are present in one modality, MS-
+DETR can resist interference from the other modality and
+select points solely from the current modality. All the above
+visualizations demonstrate the effectiveness of the loosely
+coupled fusion strategy in MS-DETR.
+F . Further Discussion
+Even though our proposed MS-DETR demonstrates superior
+detection capability, it still has some limitations. Fig. 11 shows
+some typical failure cases on KAIST and CVC-14 datasets. It
+can be observed from the first column of Fig. 11 that the
+selected points may not fall on the same pedestrian due to the
+existence of severe misalignment. Since our model sparsely
+selects prominent points, these biased points directly lead to
+false positives. Although the loosely coupled fusion has the
+ability of resisting slight misalignment, the sparse selection
+mechanism is not enough towards severe misaligned image
+pairs. To deal with this problem, a registration module that can
+be combined with our model is essential. As for the second
+column of Fig. 11, MS-DETR selects more points in thermal
+modality than visible modality even though there are obvious
+features of pedestrian in the visible modality. MS-DETR
+is designed to adaptively select points from two modality
+features, as the two modality images contribute differently in
+daytime or nighttime scenes. However, this flexibility also re-
+sults in unbalanced feature fusion between the two modalities.
+
+===== PAGE 13 =====
+13
+Fig. 11. Visualizations of some typical failure cases on KAIST and CVC-14 datasets, where the first column shows that the selected points may not fall on
+the same pedestrian due to the large misalignment, the second column demonstrates the number of selected points is imbalanced for two modality images,
+and the third colunm indicates that some points likely fall on the background even if the pedestrian features are obvious in the visible modality.
+Constraining the number of sampled points may be a feasible
+solution, but it will sacrifice the flexibility of the model. From
+the third column of Fig. 11, MS-DETR sometimes confuses
+background elements in the visible modality, leading to the
+false selection of points on the background. The fusion of these
+false points with selected points from the thermal modality
+may also trigger false alarms. From these failure cases, we
+can conclude that ensuring the accuracy of selected points
+in the case of severe misalignment, balancing the number of
+selected points across different modalities, and guaranteeing
+the adaptability of point selection are crucial areas for further
+exploration.
+V. C ONCLUSION
+This paper presents an end-to-end multispectral pedestrian
+detector (MS-DETR). A multi-modal Transformer decoder is
+devised to fuse the visible and thermal features in a loosely
+coupled fusion way by sparsely sampling some keypoints from
+the two modalities independently and fusing them with adap-
+tively learned attention weights. Therefore, the loosely coupled
+fusion strategy can naturally avoid the misalignment issue. In
+addition, by preserving the visible and thermal branches in the
+decoder, three sets of predicted slots can be obtained and a
+novel instance-aware modality-balanced optimization strategy
+is introduced to measure and adjust the contribution of each
+instance in visible and thermal images. By a well-designed
+instance-wise dynamic loss, MS-DETR outperforms existing
+methods especially on the hard cases, like small or occluded
+pedestrians.
+Limitations. While our MS-DETR can resist slight mis-
+alignment, it struggles in cases of severe misalignment. In such
+scenarios, the selected points may be sparse and poorly located
+on pedestrians, significantly impacting the performance of
+the loosely coupled fusion strategy. Therefore, considering an
+early or mid-level fusion of features alongside the loosely
+coupled strategy may offer a feasible solution. However,
+dynamically combining multiple fusion strategies remains a
+challenging and valuable direction for further exploration.
+REFERENCES
+[1] M. Enzweiler and D. M. Gavrila, “Monocular pedestrian detection:
+Survey and experiments,” IEEE transactions on pattern analysis and
+machine intelligence, vol. 31, no. 12, pp. 2179–2195, 2008.
+[2] X. Wang, M. Wang, and W. Li, “Scene-specific pedestrian detection for
+static video surveillance,” IEEE transactions on pattern analysis and
+machine intelligence, vol. 36, no. 2, pp. 361–374, 2013.
+[3] L. Zhang, L. Lin, X. Liang, and K. He, “Is faster r-cnn doing well
+for pedestrian detection?” in European conference on computer vision .
+Springer, 2016, pp. 443–457.
+[4] J. Mao, T. Xiao, Y . Jiang, and Z. Cao, “What can help pedestrian
+detection?” in Proceedings of the IEEE Conference on Computer Vision
+and Pattern Recognition , 2017, pp. 3127–3136.
+[5] W. Liu, S. Liao, W. Ren, W. Hu, and Y . Yu, “High-level semantic feature
+detection: A new perspective for pedestrian detection,” in Proceedings of
+the IEEE/CVF conference on computer vision and pattern recognition ,
+2019, pp. 5187–5196.
+[6] A. Abdelmutalab and C. Wang, “Pedestrian detection using mb-csp
+model and boosted identity aware non-maximum suppression,” IEEE
+Transactions on Intelligent Transportation Systems , vol. 23, no. 12, pp.
+24 454–24 463, 2022.
+[7] M. M. Islam, A. Karimoddini et al. , “Pedestrian detection for au-
+tonomous cars: inference fusion of deep neural networks,” IEEE Trans-
+actions on Intelligent Transportation Systems , vol. 23, no. 12, pp.
+23 358–23 368, 2022.
+[8] W.-Y . Hsu and P.-Y . Yang, “Pedestrian detection using multi-scale
+structure-enhanced super-resolution,” IEEE Transactions on Intelligent
+Transportation Systems, 2023.
+[9] C. Li, W. Xia, Y . Yan, B. Luo, and J. Tang, “Segmenting objects
+in day and night: Edge-conditioned cnn for thermal image semantic
+segmentation,” IEEE Transactions on Neural Networks and Learning
+Systems, vol. 32, no. 7, pp. 3069–3082, 2021.
+
+===== PAGE 14 =====
+14
+[10] S. Hwang, J. Park, N. Kim, Y . Choi, and I. So Kweon, “Multispectral
+pedestrian detection: Benchmark dataset and baseline,” in Proceedings
+of the IEEE conference on computer vision and pattern recognition ,
+2015, pp. 1037–1045.
+[11] H. Choi, S. Kim, K. Park, and K. Sohn, “Multi-spectral pedestrian
+detection based on accumulated object proposal with fully convolutional
+networks,” in 2016 23rd International Conference on Pattern Recogni-
+tion (ICPR) . IEEE, 2016, pp. 621–626.
+[12] D. Konig, M. Adam, C. Jarvers, G. Layher, H. Neumann, and
+M. Teutsch, “Fully convolutional region proposal networks for multi-
+spectral person detection,” in Proceedings of the IEEE Conference on
+Computer Vision and Pattern Recognition Workshops , 2017, pp. 49–56.
+[13] J. Liu, S. Zhang, S. Wang, and D. N. Metaxas, “Multispectral deep
+neural networks for pedestrian detection,” in 27th British Machine Vision
+Conference, BMVC 2016 , 2016.
+[14] K. Park, S. Kim, and K. Sohn, “Unified multi-spectral pedestrian
+detection based on probabilistic fusion networks,” Pattern Recognition,
+vol. 80, pp. 143–155, 2018.
+[15] C. Li, D. Song, R. Tong, and M. Tang, “Illumination-aware faster r-
+cnn for robust multispectral pedestrian detection,” Pattern Recognition,
+vol. 85, pp. 161–171, 2019.
+[16] D. Guan, Y . Cao, J. Yang, Y . Cao, and M. Y . Yang, “Fusion of
+multispectral data through illumination-aware deep neural networks for
+pedestrian detection,” Information Fusion , vol. 50, pp. 148–157, 2019.
+[17] H. Zhang, E. Fromont, S. Lef `evre, and B. Avignon, “Guided attentive
+feature fusion for multispectral pedestrian detection,” in Proceedings of
+the IEEE/CVF winter conference on applications of computer vision ,
+2021, pp. 72–80.
+[18] K. Dasgupta, A. Das, S. Das, U. Bhattacharya, and S. Yogamani,
+“Spatio-contextual deep network-based multimodal pedestrian detection
+for autonomous driving,” IEEE transactions on intelligent transportation
+systems, vol. 23, no. 9, pp. 15 940–15 950, 2022.
+[19] Y . Zhu, X. Sun, M. Wang, and H. Huang, “Multi-modal feature pyramid
+transformer for rgb-infrared object detection,” IEEE Transactions on
+Intelligent Transportation Systems , 2023.
+[20] S. Ren, K. He, R. Girshick, and J. Sun, “Faster r-cnn: Towards real-time
+object detection with region proposal networks,” Advances in neural
+information processing systems , vol. 28, 2015.
+[21] R. Girshick, J. Donahue, T. Darrell, and J. Malik, “Rich feature
+hierarchies for accurate object detection and semantic segmentation,”
+in Proceedings of the IEEE conference on computer vision and pattern
+recognition, 2014, pp. 580–587.
+[22] N. Carion, F. Massa, G. Synnaeve, N. Usunier, A. Kirillov, and
+S. Zagoruyko, “End-to-end object detection with transformers,” in
+European conference on computer vision . Springer, 2020, pp. 213–
+229.
+[23] X. Peng, Y . Wei, A. Deng, D. Wang, and D. Hu, “Balanced multimodal
+learning via on-the-fly gradient modulation,” in Proceedings of the
+IEEE/CVF Conference on Computer Vision and Pattern Recognition ,
+2022, pp. 8238–8247.
+[24] N. Wu, S. Jastrzebski, K. Cho, and K. J. Geras, “Characterizing and
+overcoming the greedy nature of learning in multi-modal deep neural
+networks,” in International Conference on Machine Learning . PMLR,
+2022, pp. 24 043–24 055.
+[25] A. Gonz ´alez, Z. Fang, Y . Socarras, J. Serrat, D. V ´azquez, J. Xu, and
+A. M. L ´opez, “Pedestrian detection at day/night time with visible and
+fir cameras: A comparison,” Sensors, vol. 16, no. 6, p. 820, 2016.
+[26] X. Jia, C. Zhu, M. Li, W. Tang, and W. Zhou, “Llvip: A visible-infrared
+paired dataset for low-light vision,” in Proceedings of the IEEE/CVF
+international conference on computer vision , 2021, pp. 3496–3504.
+[27] C. Li, D. Song, R. Tong, and M. Tang, “Multispectral pedestrian detec-
+tion via simultaneous detection and segmentation,” in British Machine
+Vision Conference (BMVC) .
+[28] Y . Cao, D. Guan, Y . Wu, J. Yang, Y . Cao, and M. Y . Yang, “Box-level
+segmentation supervised deep neural networks for accurate and real-time
+multispectral pedestrian detection,” ISPRS journal of photogrammetry
+and remote sensing , vol. 150, pp. 70–79, 2019.
+[29] Q. Li, C. Zhang, Q. Hu, H. Fu, and P. Zhu, “Confidence-aware fusion
+using dempster-shafer theory for multispectral pedestrian detection,”
+IEEE Transactions on Multimedia , 2022.
+[30] L. Zhang, X. Zhu, X. Chen, X. Yang, Z. Lei, and Z. Liu, “Weakly
+aligned cross-modal learning for multispectral pedestrian detection,” in
+Proceedings of the IEEE/CVF International Conference on Computer
+Vision, 2019, pp. 5127–5137.
+[31] K. Zhou, L. Chen, and X. Cao, “Improving multispectral pedestrian
+detection by addressing modality imbalance problems,” in European
+Conference on Computer Vision . Springer, 2020, pp. 787–803.
+[32] J. Kim, H. Kim, T. Kim, N. Kim, and Y . Choi, “Mlpd: Multi-label pedes-
+trian detector in multispectral domain,” IEEE Robotics and Automation
+Letters, vol. 6, no. 4, pp. 7846–7853, 2021.
+[33] L. Zhang, Z. Liu, S. Zhang, X. Yang, H. Qiao, K. Huang, and A. Hus-
+sain, “Cross-modality interactive attention network for multispectral
+pedestrian detection,” Information Fusion , vol. 50, pp. 20–29, 2019.
+[34] H. Zhang, E. Fromont, S. Lefevre, and B. Avignon, “Multispectral fusion
+for object detection with cyclic fuse-and-refine blocks,” in 2020 IEEE
+International Conference on Image Processing (ICIP) . IEEE, 2020, pp.
+276–280.
+[35] D. Xu, W. Ouyang, E. Ricci, X. Wang, and N. Sebe, “Learning
+cross-modal deep representations for robust pedestrian detection,” in
+Proceedings of the IEEE conference on computer vision and pattern
+recognition, 2017, pp. 5363–5371.
+[36] H. Zhang, E. Fromont, S. Lefevre, and B. Avignon, “Deep active learn-
+ing from multispectral data through cross-modality prediction inconsis-
+tency,” in 2021 IEEE International Conference on Image Processing
+(ICIP). IEEE, 2021, pp. 449–453.
+[37] T. Liu, K.-M. Lam, R. Zhao, and G. Qiu, “Deep cross-modal repre-
+sentation learning and distillation for illumination-invariant pedestrian
+detection,” IEEE Transactions on Circuits and Systems for Video Tech-
+nology, vol. 32, no. 1, pp. 315–329, 2021.
+[38] J. U. Kim, S. Park, and Y . M. Ro, “Uncertainty-guided cross-modal
+learning for robust multispectral pedestrian detection,” IEEE Transac-
+tions on Circuits and Systems for Video Technology , vol. 32, no. 3, pp.
+1510–1523, 2021.
+[39] Z. Chen, D. Hong, and H. Gao, “Grid network: Feature extraction
+in anisotropic perspective for hyperspectral image classification,” IEEE
+Geoscience and Remote Sensing Letters , 2023.
+[40] Z. Chen, Y . Wang, H. Gao, Y . Ding, Q. Zhong, D. Hong, and B. Zhang,
+“Temporal difference-guided network for hyperspectral image change
+detection,” International Journal of Remote Sensing , vol. 44, no. 19, pp.
+6033–6059, 2023.
+[41] Z. Chen, Z. Lu, H. Gao, Y . Zhang, J. Zhao, D. Hong, and B. Zhang,
+“Global to local: A hierarchical detection algorithm for hyperspectral
+image target detection,” IEEE Transactions on Geoscience and Remote
+Sensing, vol. 60, pp. 1–15, 2022.
+[42] Z. Chen, G. Wu, H. Gao, Y . Ding, D. Hong, and B. Zhang, “Local
+aggregation and global attention network for hyperspectral image clas-
+sification with spectral-induced aligned superpixel segmentation,” Expert
+Systems with Applications , vol. 232, p. 120828, 2023.
+[43] J. Beal, E. Kim, E. Tzeng, D. H. Park, A. Zhai, and D. Kislyuk, “Toward
+transformer-based object detection,” arXiv preprint arXiv:2012.09958 ,
+2020.
+[44] A. Dosovitskiy, L. Beyer, A. Kolesnikov, D. Weissenborn, X. Zhai,
+T. Unterthiner, M. Dehghani, M. Minderer, G. Heigold, S. Gelly et al. ,
+“An image is worth 16x16 words: Transformers for image recognition
+at scale,” arXiv preprint arXiv:2010.11929 , 2020.
+[45] Y . Fang, B. Liao, X. Wang, J. Fang, J. Qi, R. Wu, J. Niu, and W. Liu,
+“You only look at one sequence: Rethinking transformer in vision
+through object detection,” Advances in Neural Information Processing
+Systems, vol. 34, pp. 26 183–26 197, 2021.
+[46] A. Bulat, R. Guerrero, B. Martinez, and G. Tzimiropoulos, “Fs-detr:
+Few-shot detection transformer with prompting and without re-training,”
+arXiv preprint arXiv:2210.04845 , 2022.
+[47] D. Meng, X. Chen, Z. Fan, G. Zeng, H. Li, Y . Yuan, L. Sun, and
+J. Wang, “Conditional detr for fast training convergence,” inProceedings
+of the IEEE/CVF International Conference on Computer Vision , 2021,
+pp. 3651–3660.
+[48] Z. Dai, B. Cai, Y . Lin, and J. Chen, “Up-detr: Unsupervised pre-training
+for object detection with transformers,” in Proceedings of the IEEE/CVF
+conference on computer vision and pattern recognition , 2021, pp. 1601–
+1610.
+[49] X. Dai, Y . Chen, J. Yang, P. Zhang, L. Yuan, and L. Zhang, “Dynamic
+detr: End-to-end object detection with dynamic attention,” in Proceed-
+ings of the IEEE/CVF International Conference on Computer Vision ,
+2021, pp. 2988–2997.
+[50] X. Zhu, W. Su, L. Lu, B. Li, X. Wang, and J. Dai, “Deformable detr: De-
+formable transformers for end-to-end object detection,” in International
+Conference on Learning Representations , 2020.
+[51] G. Zhang, Z. Luo, Y . Yu, K. Cui, and S. Lu, “Accelerating detr
+convergence via semantic-aligned matching,” in Proceedings of the
+IEEE/CVF Conference on Computer Vision and Pattern Recognition ,
+2022, pp. 949–958.
+[52] S. Liu, F. Li, H. Zhang, X. Yang, X. Qi, H. Su, J. Zhu, and L. Zhang,
+“Dab-detr: Dynamic anchor boxes are better queries for detr,” in
+International Conference on Learning Representations , 2021.
+
+===== PAGE 15 =====
+15
+[53] A. Kamath, M. Singh, Y . LeCun, G. Synnaeve, I. Misra, and N. Carion,
+“Mdetr-modulated detection for end-to-end multi-modal understanding,”
+in Proceedings of the IEEE/CVF International Conference on Computer
+Vision, 2021, pp. 1780–1790.
+[54] M. Maaz, H. Rasheed, S. Khan, F. S. Khan, R. M. Anwer, and M.-H.
+Yang, “Class-agnostic object detection with multi-modal transformer,”
+in The European Conference on Computer Vision. Springer , 2022.
+[55] S.-Y . Chu and M.-S. Lee, “Mt-detr: Robust end-to-end multimodal
+detection with confidence fusion,” in Proceedings of the IEEE/CVF
+Winter Conference on Applications of Computer Vision , 2023, pp. 5252–
+5261.
+[56] Y .-T. Chen, J. Shi, Z. Ye, C. Mertz, D. Ramanan, and S. Kong,
+“Multimodal object detection via probabilistic ensembling,” in European
+Conference on Computer Vision . Springer, 2022, pp. 139–158.
+[57] N. Chen, J. Xie, J. Nie, J. Cao, Z. Shao, and Y . Pang, “Attentive align-
+ment network for multispectral pedestrian detection,” in Proceedings of
+the 31st ACM international conference on multimedia , 2023, pp. 3787–
+3795.
+[58] R. Li, J. Xiang, F. Sun, Y . Yuan, L. Yuan, and S. Gou, “Multiscale
+cross-modal homogeneity enhancement and confidence-aware fusion for
+multispectral pedestrian detection,” IEEE Transactions on Multimedia ,
+2023.
+[59] P. Dollar, C. Wojek, B. Schiele, and P. Perona, “Pedestrian detection: An
+evaluation of the state of the art,” IEEE transactions on pattern analysis
+and machine intelligence , vol. 34, no. 4, pp. 743–761, 2011.
+[60] W. Wang, J. Zhang, Y . Cao, Y . Shen, and D. Tao, “Towards data-efficient
+detection transformers,” in European conference on computer vision .
+Springer, 2022, pp. 88–105.
+[61] H. Zhang, M. Cisse, Y . N. Dauphin, and D. Lopez-Paz, “mixup: Beyond
+empirical risk minimization,” arXiv preprint arXiv:1710.09412 , 2017.
+[62] A. Bochkovskiy, C.-Y . Wang, and H.-Y . M. Liao, “Yolov4: Op-
+timal speed and accuracy of object detection,” arXiv preprint
+arXiv:2004.10934, 2020.
+[63] E. D. Cubuk, B. Zoph, J. Shlens, and Q. V . Le, “Randaugment:
+Practical automated data augmentation with a reduced search space,”
+in Proceedings of the IEEE/CVF conference on computer vision and
+pattern recognition workshops , 2020, pp. 702–703.
+[64] A. Paszke, S. Gross, F. Massa, A. Lerer, J. Bradbury, G. Chanan,
+T. Killeen, Z. Lin, N. Gimelshein, L. Antiga et al. , “Pytorch: An
+imperative style, high-performance deep learning library,” Advances in
+neural information processing systems , vol. 32, 2019.
+[65] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image
+recognition,” in Proceedings of the IEEE conference on computer vision
+and pattern recognition , 2016, pp. 770–778.
+[66] I. Loshchilov and F. Hutter, “Decoupled weight decay regularization,”
+arXiv preprint arXiv:1711.05101 , 2017.
+[67] J. Xie, R. M. Anwer, H. Cholakkal, J. Nie, J. Cao, J. Laaksonen, and
+F. S. Khan, “Learning a dynamic cross-modal network for multispectral
+pedestrian detection,” in Proceedings of the 30th ACM International
+Conference on Multimedia , 2022, pp. 4043–4052.
+[68] Y . Cao, J. Bin, J. Hamari, E. Blasch, and Z. Liu, “Multimodal object
+detection by channel switching and spatial attention,” in Proceedings of
+the IEEE/CVF Conference on Computer Vision and Pattern Recognition ,
+2023, pp. 403–411.
+[69] F. Qingyun, H. Dapeng, and W. Zhaokui, “Cross-modality fu-
+sion transformer for multispectral object detection,” arXiv preprint
+arXiv:2111.00273, 2021.
+[70] H. Fu, S. Wang, P. Duan, C. Xiao, R. Dian, S. Li, and Z. Li, “Lraf-net:
+Long-range attention fusion network for visible–infrared object detec-
+tion,” IEEE Transactions on Neural Networks and Learning Systems ,
+2023.
+Yinghui Xing received a B.S. and Ph.D. degrees
+from the School of Artificial Intelligence, Xidian
+University, Xi’an, China, in 2014 and 2020, respec-
+tively. She is now an Associate Professor with the
+School of Computer Science, Northwestern Poly-
+technical University, Xi’an. Her research interests
+include remote sensing image processing, image
+fusion, and infrared target detection.
+Shuo Yang received the B.S. degree from the
+Taiyuan University of Technology, Shanxi, China, in
+2023. He is currently pursuing the M.S. degree with
+the School of Computer Science, Northwestern Poly-
+technical University. His research interests include
+multi-source information fusion and multispectral
+object detection.
+Song Wang received the B.S. degree from the
+Taiyuan University of Technology, Taiyuan, China,
+in 2018. He is currently pursuing the M.S. degree
+with the School of Computer Science, Northwest-
+ern Polytechnical University. His research interests
+include multimodal fusion and object detection.
+Shizhou Zhang received a B.E. and Ph.D. degree
+from Xi’an Jiaotong University, Xi’an, China, in
+2010 and 2017, respectively. Currently, he is with
+Northwestern Polytechnical University as an As-
+sociate Professor (Tenured). His research interests
+include content-based image analysis, pattern recog-
+nition and machine learning, specifically in the areas
+of deep learning-based vision tasks such as image
+classification, object detection, reidentification and
+neural architecture search.
+Guoqiang Liang received a B.S. in automation and
+a Ph.D. degrees in pattern recognition and intelligent
+systems from Xi ′an Jiaotong University (XJTU),
+Xi′an, China, in 2012 and 2018, respectively. From
+Mar. to Sep. 2017, he was a visiting Ph.D. Student
+with the University of South Carolina, Columbia,
+SC, USA. Currently, he is doing PostDoctoral Re-
+search at the School of Computer Science and
+Engineering, Northwestern Polytechnical University,
+Xi′an, China. His research interests include human
+pose estimation and human action classification.
+Xiuwei Zhang received the B.S., M.S. and Ph.D. de-
+grees from the School of Computer Science, North-
+western Polytechnical University, Xi’an, China, in
+2004, 2007 and 2011, respectively. She is now
+an Associate Professor with the School of Com-
+puter Science, Northwestern Polytechnical Univer-
+sity, Xi’an. Her research interests include remote
+sensing image processing, multi-model image fu-
+sion, image registration and intelligent forecasting.
+Yanning Zhang (SM’10) received her B.S. degree
+from Dalian University of Science and Engineering
+in 1988, M.S. and Ph.D. degrees from Northwestern
+Polytechnical University in 1993 and 1996, respec-
+tively. She is presently a Professor at the School
+of Computer Science, Northwestern Polytechnical
+University. She is also the organization chair of
+the Ninth Asian Conference on Computer Vision
+(ACCV2009). Her research work focuses on signal
+and image processing, computer vision and pattern
+recognition. She has published over 200 papers in
+international journals, conferences and Chinese key journals.
