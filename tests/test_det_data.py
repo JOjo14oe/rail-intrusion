@@ -5,11 +5,16 @@
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from railintrude.det.data import (CLASS_NAMES, load_ids, load_split,
                                  read_frame)
 
 DATA = Path(__file__).resolve().parents[1] / "data/pp_kitti"
+pytestmark = pytest.mark.skipif(
+    not (DATA / "ImageSets" / "val.txt").exists(),
+    reason="需要 data/pp_kitti（见 docs/osdar23-getting-started.md 的生成步骤）",
+)
 
 
 def test_load_ids_returns_frame_ids_without_points():

@@ -48,7 +48,7 @@
 这是一个**按需跑一次的流水线**，不是常驻服务——没人启动它的时候它当然"不运行"。
 
 ```powershell
-cd "C:\Users\jojo as\Desktop\Deepseek Harness\rail-intrusion"
+cd "rail-intrusion"
 python tools/run_lit.py            # 六步全跑；产物已是最新的步骤自动跳过
 python tools/run_lit.py --list     # 只看步骤顺序与各步产物
 python tools/run_lit.py --steps search --force   # 只重跑检索

@@ -14,7 +14,7 @@
 
 **上游**：`docs/superpowers/specs/2026-10-20-rail-intrusion-demo-v0-design.md`
 
-**工作目录**：`C:\Users\jojo as\Desktop\Deepseek Harness\rail-intrusion`
+**工作目录**：`rail-intrusion`
 
 ---
 
@@ -35,7 +35,7 @@
 - [ ] **步骤 1：建目录并初始化 git**
 
 ```powershell
-cd "C:\Users\jojo as\Desktop\Deepseek Harness\rail-intrusion"
+cd "rail-intrusion"
 git init
 New-Item -ItemType Directory -Force -Path railintrude, tests, data\raw, models, out | Out-Null
 ```

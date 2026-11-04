@@ -17,7 +17,7 @@ import yaml
 
 from railintrude.det.data import CLASS_NAMES, load_ids
 
-ZIP = Path(r"C:\Users\jojo as\Desktop\yolo11_full.zip")
+ZIP = Path(Path(__file__).resolve().parents[1] / "data" / "yolo11_full.zip")
 SRC = ROOT / "data" / "osdar23_yolo43"
 OUT = ROOT / "data" / "person_val"
 WEXT = ROOT / "weights_ext"

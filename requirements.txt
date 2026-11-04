@@ -1,4 +1,12 @@
-ultralytics
-opencv-python
-numpy
-pytest
+# 依赖分两部分：2D 检测（ultralytics）与 3D 检测（自研 PointPillars，纯 PyTorch）
+ultralytics>=8.3
+opencv-python>=4.9
+numpy>=1.26
+pyyaml>=6.0
+pytest>=8.0
+
+# torch / torchvision 需要按平台选择索引（默认 PyPI 的 CPU 轮子也能跑，但很慢）：
+#   CUDA 12.x : pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130
+#   纯 CPU    : pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+torch>=2.4
+torchvision>=0.19

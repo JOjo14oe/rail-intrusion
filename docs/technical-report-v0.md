@@ -1,7 +1,7 @@
 # V0 技术报告：车端侵限检测与分级预警（纯推理演示 + 微调实验）
 
 版本：V0 / 日期：2026-10-20
-工程目录：`C:\Users\jojo as\Desktop\Deepseek Harness\rail-intrusion`
+工程目录：`rail-intrusion`
 
 ---
 
@@ -103,7 +103,7 @@
 ## 8. 复现
 
 ```powershell
-cd "C:\Users\jojo as\Desktop\Deepseek Harness\rail-intrusion"
+cd "rail-intrusion"
 
 # 端到端演示（GPU）
 python -m railintrude.demo --video data/raw/platform-arrival-1080p.webm --out out/full --device 0

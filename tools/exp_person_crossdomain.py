@@ -7,7 +7,7 @@ import sys
 import numpy as np
 from pathlib import Path
 
-ROOT = Path(r"C:\Users\jojo as\Desktop\Deepseek Harness\rail-intrusion")
+ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "data" / "osdar23_yolo43"
 OUT = ROOT / "data" / "person_val"
 W, H = 2464.0, 1600.0
